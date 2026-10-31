@@ -1,7 +1,9 @@
 #!/bin/bash
-# Writes THIRD_PARTY_NOTICES.md: ostt, every Rust crate the aarch64-apple-darwin build of ostt
-# uses (with full licence texts), transcribe-cpp-sys's vendored C/C++ components, the Swift
-# packages pinned in Package.resolved, and the speech model credits.
+# Writes THIRD_PARTY_NOTICES.md: ostt with its full licence, every Rust crate the
+# aarch64-apple-darwin build of ostt compiles (copyright lines plus a reference to each distinct
+# licence text, printed once), the vendored C/C++ components (transcribe-cpp-sys's and the
+# SQLite bundled by libsqlite3-sys), the Swift packages pinned in Package.resolved, and the
+# speech model credits.
 # Usage: scripts/notices.sh [OUTPUT]   (default: THIRD_PARTY_NOTICES.md at the repo root)
 # OSTT_SRC=/path/to/ostt uses an existing checkout of the pinned tag instead of cloning.
 # Bumping ostt: change both pins together with scripts/fetch-ostt.sh.
@@ -30,7 +32,7 @@ done
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/spdx" "$TMP/swift"
+mkdir -p "$TMP/spdx" "$TMP/swift" "$TMP/texts"
 
 fetch() { curl -fsSL --retry 2 --connect-timeout 20 --max-time 120 "$@"; }
 
@@ -51,24 +53,25 @@ cargo fetch --locked --quiet --manifest-path "$SRC/Cargo.toml"
 cargo metadata --format-version 1 --locked --filter-platform "$TARGET" \
   --manifest-path "$SRC/Cargo.toml" >"$TMP/meta.json"
 
-# Every package reachable from ostt over normal and build edges (dev-only edges never ship),
-# one TSV row each: name, version, licence, repository, source dir, authors.
-jq -r '
-  (.resolve.nodes | map({key: .id, value: [.deps[] | select(any(.dep_kinds[]; .kind != "dev")) | .pkg]})
-    | from_entries) as $graph
-  | .resolve.root as $root
-  | ({seen: {}, todo: [$root]}
-     | until(.todo | length == 0;
-         .todo[0] as $id
-         | if .seen[$id] then .todo |= .[1:]
-           else .seen[$id] = true | .todo = .todo[1:] + $graph[$id] end)
-     | .seen) as $reachable
-  | [.packages[] | select($reachable[.id] and .id != $root)]
+# The crates the target build compiles over normal and build edges. cargo tree applies features
+# and platform cfgs; resolve.nodes in the metadata also lists disabled optional dependencies.
+cargo tree --locked -e normal,build --target "$TARGET" --prefix none \
+  --manifest-path "$SRC/Cargo.toml" \
+  | sed -E 's/ \(.*$//' | grep -vxF "ostt v$OSTT_VERSION" | sort -u >"$TMP/tree.txt"
+
+# One TSV row per crate: name, version, licence, repository, source dir, authors.
+jq -r --rawfile tree "$TMP/tree.txt" '
+  ($tree | split("\n") | map(select(. != "") | {key: ., value: true}) | from_entries) as $keep
+  | [.packages[] | select($keep["\(.name) v\(.version)"])]
   | sort_by(.name, .version)[]
   | [.name, .version, (.license // ""), (.repository // .homepage // "https://crates.io/crates/\(.name)"),
      (.manifest_path | sub("/Cargo.toml$"; "")),
      (.authors | map(sub("\\s*<[^>]*>"; "")) | join(", "))]
   | @tsv' "$TMP/meta.json" >"$TMP/crates.tsv"
+tree_count="$(wc -l <"$TMP/tree.txt" | tr -d ' ')"
+crate_rows="$(wc -l <"$TMP/crates.tsv" | tr -d ' ')"
+echo "Crates: cargo tree $tree_count, metadata matches $crate_rows"
+((tree_count == crate_rows)) || die "cargo tree and cargo metadata disagree on the crate set"
 OSTT_LICENCE="$(jq -r '.resolve.root as $r | .packages[] | select(.id == $r) | .license' "$TMP/meta.json")"
 
 # --- helpers ---------------------------------------------------------------------------------
@@ -99,6 +102,34 @@ copyright_lines() {
     | grep -viE '\[yyyy\]|<year>|\[year\]|\{yyyy\}|\[name of' \
     | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//; s/^(©|\([cC]\))/Copyright \1/' \
     | awk '!seen[$0]++' || true
+}
+
+# The text without its copyright lines (same test as copyright_lines, minus the template filter).
+strip_copyright() {
+  tr -d '\r' <"$1" | perl -ne 'print unless /^\s*(copyright|©|\(c\)\s*\d{4})/i && /\d{4}|\(c\)|©/i'
+}
+
+# Registers a licence text once per identity (copyright lines and whitespace removed) and sets
+# REF to its link. Returns 1 when nothing but copyright lines is left.
+text_count=0
+register_text() { # label, file, user
+  local hash n body="$TMP/body.txt"
+  strip_copyright "$2" | sed '/[^[:space:]]/,$!d' >"$body"
+  [[ -n "$(tr -d '[:space:]' <"$body")" ]] || return 1
+  hash="$(tr -d '[:space:]' <"$body" | shasum -a 256 | awk '{print $1}')"
+  if [[ -f "$TMP/texts/$hash" ]]; then
+    n="$(cat "$TMP/texts/$hash")"
+  else
+    text_count=$((text_count + 1))
+    n=$text_count
+    echo "$n" >"$TMP/texts/$hash"
+    {
+      printf '<a id="licence-text-%s"></a>\n### Licence text %s\n\n' "$n" "$n"
+      printf 'First seen as `%s` in %s. Copyright lines are listed with each crate.\n\n' "$1" "$3"
+      text_block "$1" "$body"
+    } >>"$TMP/texts.md"
+  fi
+  REF="$1 ([text $n](#licence-text-$n))"
 }
 
 text_block() { # title, file
@@ -149,6 +180,7 @@ note_expr "$OSTT_LICENCE"
 # --- Rust crates -----------------------------------------------------------------------------
 crate_count=0
 : >"$TMP/crates.md"
+: >"$TMP/texts.md"
 while IFS=$'\t' read -r name version licence repo dir authors; do
   [[ -n "$licence" ]] || die "$name $version declares no SPDX licence"
   anchor="crate-$name-$version"
@@ -165,15 +197,24 @@ while IFS=$'\t' read -r name version licence repo dir authors; do
     fi
     if ((${#files[@]})); then
       copyright_bullets "${authors:-The $name developers}" "${files[@]}"
-      echo
-      for f in "${files[@]}"; do text_block "${f##*/}" "$f"; done
     else
-      printf -- '- Copyright (c) %s\n\n' "${authors:-The $name developers}"
-      printf 'The crate ships no licence file; the standard SPDX texts follow.\n\n'
-      while IFS= read -r id; do text_block "$id (SPDX standard text)" "$(spdx_text "$id")"; done \
-        < <(licence_ids "$licence" | awk '!seen[$0]++')
+      printf -- '- Copyright (c) %s\n' "${authors:-The $name developers}"
     fi
   } >>"$TMP/crates.md"
+  refs=()
+  for f in "${files[@]+"${files[@]}"}"; do
+    if register_text "${f##*/}" "$f" "$name $version"; then refs+=("$REF"); fi
+  done
+  # No licence text in the crate: reference the standard SPDX texts.
+  if ((${#refs[@]} == 0)); then
+    while IFS= read -r id; do
+      register_text "$id (SPDX standard text)" "$(spdx_text "$id")" "$name $version" \
+        || die "SPDX text for $id is empty"
+      refs+=("$REF")
+    done < <(licence_ids "$licence" | awk '!seen[$0]++')
+  fi
+  ref_list="$(printf '%s, ' "${refs[@]}")"
+  printf -- '- Licence texts: %s\n\n' "${ref_list%, }" >>"$TMP/crates.md"
   crate_count=$((crate_count + 1))
 done <"$TMP/crates.tsv"
 
@@ -211,6 +252,29 @@ while IFS='|' read -r _ comp lic path _; do
   vendored=$((vendored + 1))
 done < <(grep -E '^\| *[^ |-][^|]*\|[^|]*\| *\[`' "$TCS_DIR/THIRD-PARTY-LICENSES.md")
 ((vendored)) || die "no components parsed from transcribe-cpp-sys THIRD-PARTY-LICENSES.md"
+
+# libsqlite3-sys compiles its SQLite amalgamation into ostt only with the bundled feature.
+SQLITE_SYS="$(jq -r '. as $m | .resolve.nodes[] | select(.features | index("bundled"))
+  | .id as $id | $m.packages[] | select(.id == $id and .name == "libsqlite3-sys")
+  | [.version, (.manifest_path | sub("/Cargo.toml$"; ""))] | @tsv' "$TMP/meta.json")"
+if [[ -n "$SQLITE_SYS" ]] && grep -qxF "libsqlite3-sys v${SQLITE_SYS%%$'\t'*}" "$TMP/tree.txt"; then
+  sys_version="${SQLITE_SYS%%$'\t'*}"
+  header="${SQLITE_SYS#*$'\t'}/sqlite3/sqlite3.h"
+  sqlite_version="$(sed -nE 's/^#define SQLITE_VERSION +"([^"]+)".*/\1/p' "$header")"
+  [[ -n "$sqlite_version" ]] || die "no SQLITE_VERSION in $header"
+  # The blessing that stands in for a licence, from the header's first comment.
+  sed -n '/The author disclaims copyright/,/never taking more than you give/{p;/never taking/q;}' "$header" \
+    | sed -E 's/^\*\* ?//; s/^ +//' >"$TMP/sqlite-blessing.txt"
+  [[ -s "$TMP/sqlite-blessing.txt" ]] || die "no SQLite blessing in $header"
+  summary SQLite vendored-sqlite "$sqlite_version (in libsqlite3-sys $sys_version)" blessing
+  note_expr blessing
+  {
+    printf '<a id="vendored-sqlite"></a>\n### SQLite %s (bundled in libsqlite3-sys %s)\n\n' "$sqlite_version" "$sys_version"
+    printf -- '- Licence: public domain (SPDX `blessing`)\n- Website: <https://sqlite.org/copyright.html>\n\n'
+    text_block "sqlite3.h" "$TMP/sqlite-blessing.txt"
+  } >>"$TMP/vendored.md"
+  vendored=$((vendored + 1))
+fi
 
 # --- Swift packages --------------------------------------------------------------------------
 : >"$TMP/swift.md"
@@ -266,10 +330,11 @@ Generated by \`scripts/notices.sh\` from ostt $OSTT_VERSION (commit \`$OSTT_COMM
 Contents:
 
 1. [ostt](#ostt): the bundled transcription helper.
-2. [Rust crates](#rust-crates): $crate_count packages from ostt's \`Cargo.lock\` that its $TARGET build uses.
-3. [Vendored C/C++ components](#vendored): transcribe.cpp and the components it vendors, built into ostt by transcribe-cpp-sys.
-4. [Swift packages](#swift-packages): $swift_count packages built into the app.
-5. [Speech models](#speech-models): credits for the optional offline models.
+2. [Rust crates](#rust-crates): $crate_count packages from ostt's \`Cargo.lock\` that its $TARGET build compiles.
+3. [Licence texts](#licence-texts): the $text_count distinct licence texts the crates reference.
+4. [Vendored C/C++ components](#vendored): transcribe.cpp and the components it vendors, built into ostt by transcribe-cpp-sys, and SQLite, built in by libsqlite3-sys.
+5. [Swift packages](#swift-packages): $swift_count packages built into the app.
+6. [Speech models](#speech-models): credits for the optional offline models.
 
 ## Summary
 
@@ -279,9 +344,11 @@ EOF
   cat "$TMP/summary.md"
   echo
   cat "$TMP/ostt.md"
-  printf '<a id="rust-crates"></a>\n## Rust crates\n\nEvery package in ostt %s'"'"'s `Cargo.lock` that its %s build uses through normal or build dependencies. For dual- or multi-licensed crates, all licence texts the crate ships are included.\n\n' "$OSTT_VERSION" "$TARGET"
+  printf '<a id="rust-crates"></a>\n## Rust crates\n\nEvery package in ostt %s'"'"'s `Cargo.lock` that its %s build compiles through normal or build dependencies. Each crate lists its copyright lines and links every licence text it ships; for dual- or multi-licensed crates, all of them.\n\n' "$OSTT_VERSION" "$TARGET"
   cat "$TMP/crates.md"
-  printf '<a id="vendored"></a>\n## Vendored C/C++ components\n\nThe transcribe-cpp-sys crate compiles transcribe.cpp and the components listed in its `THIRD-PARTY-LICENSES.md` into ostt.\n\n'
+  printf '<a id="licence-texts"></a>\n## Licence texts\n\nEach distinct licence text appears once, without its copyright lines; texts that differ only in copyright lines or whitespace count as one.\n\n'
+  cat "$TMP/texts.md"
+  printf '<a id="vendored"></a>\n## Vendored C/C++ components\n\nThe transcribe-cpp-sys crate compiles transcribe.cpp and the components listed in its `THIRD-PARTY-LICENSES.md` into ostt; libsqlite3-sys compiles its bundled SQLite.\n\n'
   cat "$TMP/vendored.md"
   printf '<a id="swift-packages"></a>\n## Swift packages\n\n'
   cat "$TMP/swift.md"
@@ -299,4 +366,4 @@ EOF
 mkdir -p "$(dirname "$OUT")"
 chmod 644 "$TMP/notices.md"
 mv "$TMP/notices.md" "$OUT"
-echo "Wrote $OUT: ostt, $crate_count crates, $((vendored + 1)) vendored components, $swift_count Swift packages"
+echo "Wrote $OUT: ostt, $crate_count crates, $text_count licence texts, $((vendored + 1)) vendored components, $swift_count Swift packages"
