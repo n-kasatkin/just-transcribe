@@ -2,10 +2,15 @@ import Foundation
 import Testing
 @testable import JustTranscribeKit
 
-struct OsttHelperTests {
+final class OsttHelperTests {
+    private let root = FileManager.default.temporaryDirectory.appending(path: "jt-\(UUID().uuidString)")
+
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+    }
+
     private func makeBundle(helperPermissions: Int16?) throws -> URL {
-        let bundle = FileManager.default.temporaryDirectory
-            .appending(path: "jt-\(UUID().uuidString)/just transcribe.app", directoryHint: .isDirectory)
+        let bundle = root.appending(path: "just transcribe.app", directoryHint: .isDirectory)
         let helpers = bundle.appending(path: "Contents/Helpers", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: helpers, withIntermediateDirectories: true)
         if let helperPermissions {

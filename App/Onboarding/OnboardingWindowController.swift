@@ -32,9 +32,9 @@ final class OnboardingWindowController {
     }
 
     private func finish() {
-        defaults.set(true, forKey: Onboarding.completedKey)
+        let firstCompletion = Onboarding.complete(defaults)
         loginItem.refresh()
-        if !loginItem.state.isOn {
+        if firstCompletion, !loginItem.state.isOn {
             loginItem.setEnabled(true)
             if loginItem.errorMessage != nil, !loginFailureShown {
                 loginFailureShown = true

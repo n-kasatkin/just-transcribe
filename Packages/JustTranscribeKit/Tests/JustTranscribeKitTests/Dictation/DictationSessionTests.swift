@@ -25,7 +25,9 @@ struct DictationSessionTests {
             save: @escaping @Sendable ([Float], AudioContainer) throws -> TakeResult = { _, _ in
                 .saved(URL(filePath: "/take.wav"), duration: 1)
             },
-            transcribe: @escaping @Sendable (URL, Duration) async throws -> String = { _, _ in "привет" }
+            transcribe: @escaping @Sendable (URL, Duration) async throws -> String = { _, _ in "привет" },
+            paste: (@MainActor (String) async -> Paster.Outcome)? = nil,
+            maxRecordingDuration: Duration = .seconds(30 * 60)
         ) {
             let containers = containers
             let transcribed = transcribed
@@ -48,10 +50,10 @@ struct DictationSessionTests {
                 },
                 paste: { text in
                     self.pasted.append(text)
-                    return .pasted
+                    return await paste?(text) ?? .pasted
                 },
                 copy: { _ in true }
-            ))
+            ), maxRecordingDuration: maxRecordingDuration)
             session.onPhaseChange = { self.phases.append($0) }
             session.onFeedback = { self.feedback.append($0) }
             session.onNoModel = { self.noModelCalls += 1 }
@@ -167,6 +169,30 @@ struct DictationSessionTests {
         #expect(harness.feedback == [.hidden])
     }
 
+    @Test func escapeDuringThePasteDelayTypesNothing() async {
+        let keystrokes = Collector<Void>()
+        let paster = Paster(
+            writePasteboard: { _ in true },
+            isAccessibilityTrusted: { true },
+            isSecureInputEnabled: { false },
+            sendPasteKeystroke: { keystrokes.append(()) },
+            keystrokeDelay: .seconds(30)
+        )
+        let harness = Harness(paste: { await paster.paste($0) })
+        await harness.record()
+        harness.session.toggle()
+        let pending = harness.session.work
+        for _ in 0..<10_000 where harness.pasted.isEmpty {
+            await Task.yield()
+        }
+        #expect(harness.pasted == ["привет"])
+        harness.session.cancel()
+        await pending?.value
+        #expect(keystrokes.values.isEmpty)
+        #expect(harness.session.phase == .idle)
+        #expect(harness.feedback == [.hidden])
+    }
+
     @Test func escapeWhileRecordingDiscardsTheTake() async {
         let harness = Harness()
         await harness.record()
@@ -181,6 +207,27 @@ struct DictationSessionTests {
         let harness = Harness()
         await harness.record()
         harness.session.interrupted()
+        await harness.session.work?.value
+        #expect(harness.pasted == ["привет"])
+    }
+
+    @Test func aForgottenRecordingStopsAndTranscribesAtTheLimit() async {
+        let harness = Harness(maxRecordingDuration: .milliseconds(10))
+        await harness.record()
+        await harness.session.recordingLimit?.value
+        await harness.session.work?.value
+        #expect(harness.phases == [.starting, .recording, .transcribing, .idle])
+        #expect(harness.pasted == ["привет"])
+    }
+
+    @Test func stoppingBeforeTheLimitCancelsIt() async {
+        let harness = Harness()
+        await harness.record()
+        let limit = harness.session.recordingLimit
+        #expect(limit != nil)
+        harness.session.toggle()
+        #expect(harness.session.recordingLimit == nil)
+        #expect(limit?.isCancelled == true)
         await harness.session.work?.value
         #expect(harness.pasted == ["привет"])
     }

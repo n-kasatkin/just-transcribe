@@ -69,4 +69,15 @@ struct PasterTests {
         #expect(await paster.paste("text") == .copiedOnly)
         #expect(recorder.keystrokes == 0)
     }
+
+    @Test func cancelDuringTheDelaySendsNoKeystroke() async {
+        let recorder = PasteRecorder()
+        var paster = recorder.paster()
+        paster.keystrokeDelay = .seconds(30)
+        let task = Task { await paster.paste("text") }
+        task.cancel()
+        #expect(await task.value == .copiedOnly)
+        #expect(recorder.pasteboard == "text")
+        #expect(recorder.keystrokes == 0)
+    }
 }

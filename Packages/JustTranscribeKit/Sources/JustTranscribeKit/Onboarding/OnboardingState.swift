@@ -72,6 +72,14 @@ public enum Onboarding {
         !defaults.bool(forKey: completedKey)
     }
 
+    /// Records Done. True only on the first completion, the one that turns on start at login, so a
+    /// later Done from "Setup…" keeps the user's Settings choice.
+    public static func complete(_ defaults: UserDefaults) -> Bool {
+        let first = shouldShowAtLaunch(defaults)
+        defaults.set(true, forKey: completedKey)
+        return first
+    }
+
     /// The model to select once a key for `provider` is saved: ostt lists each provider's recommended
     /// model first. Nil when a model of that provider is already selected, so the user's choice stays.
     public static func modelAfterSavingKey(provider: String, current: OsttModelID?, models: [OsttModel]) -> OsttModelID? {

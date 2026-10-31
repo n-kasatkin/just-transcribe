@@ -22,21 +22,26 @@ public struct OsttSettingsClient: Sendable {
     private let configRunner: any OsttRunning
     private let modelsDirectory: URL?
     private let stallTimeout: Duration
+    private let progressInterval: Duration
 
     /// - Parameters:
     ///   - configRunner: runs the calls that change `ostt.toml`; `runner` when nil.
     ///   - paths: lets `listModels` fill in local model sizes from ostt's registry cache and lets a
     ///     stopped download remove its partial file.
+    ///   - progressInterval: the shortest gap between two progress reports. ostt prints a line per
+    ///     network chunk, thousands a second on a fast link, and each report re-renders the settings.
     public init(
         runner: any OsttRunning,
         configRunner: (any OsttRunning)? = nil,
         paths: OsttPaths? = nil,
-        stallTimeout: Duration = .seconds(60)
+        stallTimeout: Duration = .seconds(60),
+        progressInterval: Duration = .milliseconds(200)
     ) {
         self.runner = runner
         self.configRunner = configRunner ?? runner
         modelsDirectory = paths?.modelsDirectory
         self.stallTimeout = stallTimeout
+        self.progressInterval = progressInterval
     }
 
     /// `model list --provider ID --format json`. For `whisper` and `parakeet` this fetches ostt's model
@@ -78,7 +83,7 @@ public struct OsttSettingsClient: Sendable {
         _ = try await run(["model", "select", id.description], on: configRunner)
     }
 
-    /// Downloads a local model, reporting each progress update. Throws `OsttSettingsError.downloadStalled`
+    /// Downloads a local model, reporting progress at most once per `progressInterval`. Throws `OsttSettingsError.downloadStalled`
     /// and stops ostt when no output arrives for `stallTimeout`; cancelling the task stops it too.
     public func downloadModel(
         _ id: OsttModelID,
@@ -107,18 +112,27 @@ public struct OsttSettingsClient: Sendable {
         progress: @escaping @Sendable (DownloadProgress) -> Void
     ) async throws {
         let watch = OSAllocatedUnfairLock(
-            initialState: (parser: DownloadProgressParser(), lastOutput: ContinuousClock.now)
+            initialState: (
+                parser: DownloadProgressParser(),
+                lastOutput: ContinuousClock.now,
+                lastReport: ContinuousClock.Instant?.none
+            )
         )
         let stallTimeout = stallTimeout
+        let progressInterval = progressInterval
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask {
                 _ = try await runner.run(
                     ["model", "local", "download", id.description],
                     timeout: Self.downloadTimeout,
                     onStderr: { chunk in
-                        let update = watch.withLock { state in
+                        let update = watch.withLock { state -> DownloadProgress? in
                             state.lastOutput = .now
-                            return state.parser.feed(chunk)
+                            // The parser sees every chunk; only the report is rate-limited.
+                            guard let update = state.parser.feed(chunk) else { return nil }
+                            if let last = state.lastReport, state.lastOutput - last < progressInterval { return nil }
+                            state.lastReport = state.lastOutput
+                            return update
                         }
                         if let update { progress(update) }
                     }

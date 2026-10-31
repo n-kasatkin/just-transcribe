@@ -25,11 +25,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         services.onboardingWindow.showIfNeeded()
     }
+
+    /// Waits for running model downloads to stop, so no orphaned ostt leaves a partial model behind.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard services.settings.isDownloading else { return .terminateNow }
+        let settings = services.settings
+        Task {
+            // The runner kills ostt within about a second of the cancel; the quit never waits longer than 3 s.
+            await withTaskGroup { group in
+                group.addTask { await settings.stopDownloads() }
+                group.addTask { try? await Task.sleep(for: .seconds(3)) }
+                await group.next()
+                group.cancelAll()
+            }
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
 }
 
 /// The app's long-lived objects. Creating them registers only the user's dictation shortcut.
 final class AppServices {
     let dictation: DictationController
+    let settings: SettingsModel
     let settingsWindow: SettingsWindowController
     let onboardingWindow: OnboardingWindowController
     let aboutWindow: AboutWindowController
@@ -45,6 +63,7 @@ final class AppServices {
         let settingsWindow = SettingsWindowController(settings: settings, loginItem: loginItem)
         let dictation = DictationController(runner: serial, paths: paths) { settingsWindow.show() }
         settings.onModelChange = { dictation.modelChanged() }
+        self.settings = settings
         self.settingsWindow = settingsWindow
         aboutWindow = AboutWindowController(client: OsttSettingsClient(runner: process))
         self.dictation = dictation

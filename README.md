@@ -79,7 +79,7 @@ Full licence texts for every bundled component: [THIRD_PARTY_NOTICES.md](THIRD_P
 
 ## Build from source
 
-You need Xcode 26 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+You need Xcode 26 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen) 2.46 or later (`brew install xcodegen`). The first `scripts/bootstrap.sh` run needs network access to GitHub to download ostt.
 
 ```sh
 scripts/bootstrap.sh

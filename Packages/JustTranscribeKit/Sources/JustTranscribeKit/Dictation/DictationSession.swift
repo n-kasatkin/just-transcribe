@@ -95,9 +95,14 @@ public final class DictationSession {
     /// Bumped whenever a dictation ends. Work that outlives its cancel (a pending microphone prompt,
     /// a save in a detached task) compares it and drops its result.
     @ObservationIgnored private var generation = 0
+    /// A forgotten recording stops and is transcribed after this long. Samples take 64 KB/s and
+    /// saving needs about three times that, so an open-ended take would grow without bound.
+    @ObservationIgnored private let maxRecordingDuration: Duration
+    @ObservationIgnored private(set) var recordingLimit: Task<Void, Never>?
 
-    public init(_ dependencies: Dependencies) {
+    public init(_ dependencies: Dependencies, maxRecordingDuration: Duration = .seconds(30 * 60)) {
         self.dependencies = dependencies
+        self.maxRecordingDuration = maxRecordingDuration
     }
 
     public func toggle() {
@@ -174,6 +179,10 @@ public final class DictationSession {
                 try dependencies.startRecording()
                 work = nil
                 setPhase(.recording)
+                recordingLimit = Task { [maxRecordingDuration] in
+                    do { try await Task.sleep(for: maxRecordingDuration) } catch { return }
+                    if id == generation, phase == .recording { stop() }
+                }
             } catch {
                 if id == generation { fail(error) }
             }
@@ -244,6 +253,10 @@ public final class DictationSession {
     }
 
     private func setPhase(_ newPhase: DictationPhase) {
+        if newPhase != .recording {
+            recordingLimit?.cancel()
+            recordingLimit = nil
+        }
         phase = newPhase
         onPhaseChange?(newPhase)
     }

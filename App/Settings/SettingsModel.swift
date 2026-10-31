@@ -23,6 +23,8 @@ final class SettingsModel {
     private(set) var localModels: [String: Loadable<[OsttModel]>] = [:]
     private(set) var downloads = ActiveDownloads()
     private var downloadTasks: [OsttModelID: Task<Void, Never>] = [:]
+    /// Set on quit, so stopped downloads skip the follow-up calls that would start ostt again.
+    @ObservationIgnored private var stoppingDownloads = false
     private(set) var offlineError: String?
 
     // Keywords
@@ -41,7 +43,7 @@ final class SettingsModel {
         credentials = CredentialsStore(paths: paths)
     }
 
-    /// The selected model belongs to a cloud provider whose key is gone (Decision 4).
+    /// The selected model belongs to a cloud provider whose key is gone; it is reported, not switched.
     var currentModelMissingKey: Bool {
         SettingsState.currentModelMissingKey(currentModel, providersWithKeys: providersWithKeys)
     }
@@ -202,6 +204,7 @@ final class SettingsModel {
             }
             downloads.finish(id)
             downloadTasks[id] = nil
+            guard !stoppingDownloads else { return }
             if downloaded && thenUse {
                 await useLocalModel(id)
             } else {
@@ -212,6 +215,18 @@ final class SettingsModel {
 
     func cancelDownload(_ id: OsttModelID) {
         downloadTasks[id]?.cancel()
+    }
+
+    var isDownloading: Bool { !downloadTasks.isEmpty }
+
+    /// Stops every download and returns once each ostt is killed and its partial file removed. ostt
+    /// outlives the app otherwise, then dies writing progress to the closed pipe and leaves its
+    /// `models/<id>.tmp`, which can be gigabytes.
+    func stopDownloads() async {
+        stoppingDownloads = true
+        let tasks = Array(downloadTasks.values)
+        tasks.forEach { $0.cancel() }
+        for task in tasks { await task.value }
     }
 
     func useLocalModel(_ id: OsttModelID) async {

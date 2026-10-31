@@ -4,6 +4,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+command -v xcodegen >/dev/null || { echo "bootstrap.sh: XcodeGen 2.46 or later is required: brew install xcodegen" >&2; exit 1; }
+
 scripts/fetch-ostt.sh
 xcodegen generate
 mkdir -p JustTranscribe.xcodeproj/project.xcworkspace/xcshareddata/swiftpm

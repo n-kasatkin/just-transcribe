@@ -55,6 +55,15 @@ struct OnboardingStateTests {
         #expect(!Onboarding.shouldShowAtLaunch(defaults))
     }
 
+    @Test func onlyTheFirstDoneCountsAsFirstCompletion() throws {
+        let suite = "OnboardingStateTests-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(Onboarding.complete(defaults))
+        #expect(!Onboarding.shouldShowAtLaunch(defaults))
+        #expect(!Onboarding.complete(defaults))
+    }
+
     @Test func keyPickerStartsOnTheSelectedCloudProviderElseElevenLabs() {
         #expect(OsttProvider.withID(Onboarding.defaultKeyProvider)?.needsKey == true)
         #expect(Onboarding.keyProvider(current: nil) == "elevenlabs")

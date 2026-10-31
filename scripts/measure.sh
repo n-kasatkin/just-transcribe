@@ -2,6 +2,7 @@
 # Measures the numbers the README quotes and writes them to docs/measurements.md: DMG size,
 # installed size, the ostt helper's share, and the idle memory, CPU and threads of the app.
 # Usage: scripts/measure.sh
+# Set TEAM_ID=<your team id> to measure with your own Apple Development identity.
 # Builds Release signed with Apple Development under the .dev bundle id, without the injected
 # get-task-allow so it passes release.sh's app checks, so measuring never needs the Developer ID cert and never creates preferences or privacy grants for the release
 # id. The DMG is built the way scripts/release.sh builds it, unsigned (signing adds a few KB).
@@ -150,6 +151,8 @@ Launched once in the background (\`open -g -n\`), onboarding marked done, empty 
 | Child processes, ostt included (\`ps -o pid,ppid,comm -ax\`, by parent PID) | $CHILDREN |
 
 ## Commands
+
+To measure with your own Apple Development identity, run \`TEAM_ID=<your team id> scripts/measure.sh\`.
 
 \`\`\`sh
 scripts/bootstrap.sh

@@ -31,6 +31,8 @@ Launched once in the background (`open -g -n`), onboarding marked done, empty te
 
 ## Commands
 
+To measure with your own Apple Development identity, run `TEAM_ID=<your team id> scripts/measure.sh`.
+
 ```sh
 scripts/bootstrap.sh
 xcodebuild build -project JustTranscribe.xcodeproj -scheme JustTranscribe -configuration Release \

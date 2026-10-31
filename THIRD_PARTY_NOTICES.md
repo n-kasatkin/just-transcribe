@@ -285,7 +285,7 @@ Contents:
 <a id="ostt"></a>
 ## ostt 0.0.34
 
-just transcribe bundles the official, unmodified ostt 0.0.34 release for aarch64-apple-darwin as `Contents/Helpers/ostt`.
+just transcribe bundles the official ostt 0.0.34 release for aarch64-apple-darwin as `Contents/Helpers/ostt`, with its code unmodified. `scripts/embed-ostt.sh` re-signs it with the app's signing identity and the hardened runtime, as notarization requires, so its SHA-256 differs from the release binary's. After `codesign --remove-signature` on both copies, they differ only in the `__LINKEDIT` segment size that the larger signature grew.
 
 - Licence: `MIT`
 - Repository: <https://github.com/kristoferlund/ostt>
@@ -7129,6 +7129,10 @@ SOFTWARE.
 
 - Licence: `MIT`
 - Copyright (c) 2023-2026 The ggml authors
+- Copyright 2024 Mozilla Foundation (llamafile sgemm, `ggml/src/ggml-cpu/llamafile/sgemm.cpp`, MIT)
+- Copyright (c) 2023 Jeffrey Quesnelle and Bowen Peng (YaRN RoPE, `ggml/src/ggml-cpu/ops.cpp` and `ggml/src/ggml-metal/kernels/rope.metal`, MIT)
+
+The sgemm and YaRN RoPE files are MIT-licensed under the same terms as the text below.
 
 **ggml/LICENSE**
 

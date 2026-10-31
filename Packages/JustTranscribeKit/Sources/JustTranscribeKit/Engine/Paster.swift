@@ -7,8 +7,8 @@ import Carbon.HIToolbox
 public struct Paster: Sendable {
     public enum Outcome: Sendable, Equatable {
         case pasted
-        /// Accessibility is not granted, Secure Input is on, or the pasteboard write failed, so nothing
-        /// was typed.
+        /// Accessibility is not granted, Secure Input is on, the paste was cancelled, or the pasteboard
+        /// write failed, so nothing was typed.
         case copiedOnly
     }
 
@@ -38,9 +38,10 @@ public struct Paster: Sendable {
     public func paste(_ text: String) async -> Outcome {
         // A failed write would make ⌘V paste whatever was copied before.
         guard writePasteboard(text), isAccessibilityTrusted(), !isSecureInputEnabled() else { return .copiedOnly }
-        try? await Task.sleep(for: keystrokeDelay)
+        // A cancel during the delay (Escape) must not type the text; it stays on the pasteboard.
+        do { try await Task.sleep(for: keystrokeDelay) } catch { return .copiedOnly }
         // Secure Input may have turned on during the delay (focus moved to a password field).
-        guard !isSecureInputEnabled() else { return .copiedOnly }
+        guard !Task.isCancelled, !isSecureInputEnabled() else { return .copiedOnly }
         sendPasteKeystroke()
         return .pasted
     }

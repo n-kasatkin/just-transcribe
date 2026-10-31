@@ -98,12 +98,27 @@ struct OsttSettingsClientTests {
             return OsttResult(exitCode: 0, stdout: "Downloaded local model: whisper/base\n", stderr: "")
         }
         let updates = OSAllocatedUnfairLock(initialState: [DownloadProgress]())
-        try await OsttSettingsClient(runner: runner)
+        try await OsttSettingsClient(runner: runner, progressInterval: .zero)
             .downloadModel(OsttModelID(provider: "whisper", model: "base")) { update in updates.withLock { $0.append(update) } }
 
         #expect(updates.withLock { $0 }.map(\.fraction) == [0.5, nil])
         #expect(runner.calls.map(\.arguments) == [["model", "local", "download", "whisper/base"]])
         #expect(runner.calls.map(\.timeout) == [OsttSettingsClient.downloadTimeout])
+    }
+
+    @Test func burstsOfProgressAreReportedOncePerInterval() async throws {
+        let runner = FakeRunner { _, onStderr in
+            for step in 1...1000 {
+                onStderr?("\r\(Double(step) / 10)%  \(step) MB / 1000 MB  50.0 MB/s")
+            }
+            return OsttResult(exitCode: 0, stdout: "", stderr: "")
+        }
+        let updates = OSAllocatedUnfairLock(initialState: [DownloadProgress]())
+        try await OsttSettingsClient(runner: runner, progressInterval: .seconds(60))
+            .downloadModel(OsttModelID(provider: "whisper", model: "base")) { update in updates.withLock { $0.append(update) } }
+
+        // The first update shows at once; the burst behind it is dropped.
+        #expect(updates.withLock { $0 }.count == 1)
     }
 
     @Test func steadyProgressOutlastsStallTimeout() async throws {

@@ -36,7 +36,7 @@ public enum SettingsState {
         return sections
     }
 
-    /// The selected model belongs to a cloud provider with no saved key (Decision 4).
+    /// The selected model belongs to a cloud provider with no saved key; it is reported, not switched.
     public static func currentModelMissingKey(_ current: OsttModelID?, providersWithKeys: Set<String>) -> Bool {
         guard let current, OsttProvider.withID(current.provider)?.needsKey == true else { return false }
         return !providersWithKeys.contains(current.provider)

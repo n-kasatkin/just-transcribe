@@ -169,7 +169,7 @@ summary ostt ostt "$OSTT_VERSION" "$OSTT_LICENCE"
 note_expr "$OSTT_LICENCE"
 {
   printf '<a id="ostt"></a>\n## ostt %s\n\n' "$OSTT_VERSION"
-  printf 'just transcribe bundles the official, unmodified ostt %s release for %s as `Contents/Helpers/ostt`.\n\n' "$OSTT_VERSION" "$TARGET"
+  printf 'just transcribe bundles the official ostt %s release for %s as `Contents/Helpers/ostt`, with its code unmodified. `scripts/embed-ostt.sh` re-signs it with the app'"'"'s signing identity and the hardened runtime, as notarization requires, so its SHA-256 differs from the release binary'"'"'s. After `codesign --remove-signature` on both copies, they differ only in the `__LINKEDIT` segment size that the larger signature grew.\n\n' "$OSTT_VERSION" "$TARGET"
   printf -- '- Licence: `%s`\n- Repository: <%s>\n- Release: <%s/releases/tag/v%s> (commit `%s`)\n' \
     "$OSTT_LICENCE" "$OSTT_REPO" "$OSTT_REPO" "$OSTT_VERSION" "$OSTT_COMMIT"
   copyright_bullets "Kristofer Lund" "$SRC/LICENSE"
@@ -232,6 +232,22 @@ TCS_VERSION="$(awk -F'\t' '$1 == "transcribe-cpp-sys" {print $2}' "$TMP/crates.t
 summary transcribe.cpp vendored-transcribe-cpp "$TCS_VERSION" MIT
 note_expr MIT
 
+# ggml files compiled into ostt that carry their own MIT notices, which ggml/LICENSE omits:
+# llamafile's sgemm (GGML_LLAMAFILE is forced on) and the YaRN RoPE code (CPU and Metal).
+ggml_embedded_notices() {
+  local sgemm="ggml/src/ggml-cpu/llamafile/sgemm.cpp" ops="ggml/src/ggml-cpu/ops.cpp"
+  local rope="ggml/src/ggml-metal/kernels/rope.metal" sgemm_line yarn_line
+  sgemm_line="$(sed -nE 's#^// (Copyright .*)$#\1#p' "$TCS_DIR/$sgemm" | head -n 1)"
+  [[ "$sgemm_line" == *"Mozilla Foundation"* ]] || die "$sgemm no longer carries the Mozilla Foundation copyright"
+  yarn_line="$(sed -nE 's|^// MIT licensed\. (Copyright .*Quesnelle.*)\.$|\1|p' "$TCS_DIR/$ops" | head -n 1)"
+  if [[ -z "$yarn_line" ]] || ! grep -qF "$yarn_line" "$TCS_DIR/$rope"; then
+    die "no YaRN copyright line in $ops and $rope"
+  fi
+  printf -- '- %s (llamafile sgemm, `%s`, MIT)\n' "$sgemm_line" "$sgemm"
+  printf -- '- %s (YaRN RoPE, `%s` and `%s`, MIT)\n' "$yarn_line" "$ops" "$rope"
+  printf '\nThe sgemm and YaRN RoPE files are MIT-licensed under the same terms as the text below.\n'
+}
+
 # Rows of the component table: | Name | Licence | [`path`](path) | Pin |
 vendored=0
 while IFS='|' read -r _ comp lic path _; do
@@ -246,6 +262,7 @@ while IFS='|' read -r _ comp lic path _; do
     printf '<a id="%s"></a>\n### %s (vendored in transcribe-cpp-sys %s)\n\n' "$anchor" "$comp" "$TCS_VERSION"
     printf -- '- Licence: `%s`\n' "$lic"
     copyright_bullets "The $comp authors" "$TCS_DIR/$path"
+    [[ "$comp" != ggml ]] || ggml_embedded_notices
     echo
     text_block "$path" "$TCS_DIR/$path"
   } >>"$TMP/vendored.md"

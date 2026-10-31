@@ -11,6 +11,8 @@ options:
   developmentLanguage: en
   createIntermediateGroups: true
   generateEmptyDirectories: false
+  # 2.45.1 added Icon Composer (.icon) bundles; 2.46.0 is the version this project is tested with.
+  minimumXcodeGenVersion: 2.46.0
 
 settings:
   base:
