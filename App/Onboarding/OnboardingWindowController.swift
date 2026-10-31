@@ -9,6 +9,8 @@ final class OnboardingWindowController {
     private let defaults: UserDefaults
     private var window: NSWindow?
     private var closeObserver: (any NSObjectProtocol)?
+    /// A start-at-login failure was shown beside Done; the next Done closes the window anyway.
+    private var loginFailureShown = false
 
     init(settings: SettingsModel, loginItem: LoginItem, defaults: UserDefaults = .standard) {
         self.settings = settings
@@ -30,20 +32,26 @@ final class OnboardingWindowController {
     }
 
     private func finish() {
-        loginItem.refresh()
-        if !loginItem.state.isOn { loginItem.setEnabled(true) }
         defaults.set(true, forKey: Onboarding.completedKey)
+        loginItem.refresh()
+        if !loginItem.state.isOn {
+            loginItem.setEnabled(true)
+            if loginItem.errorMessage != nil, !loginFailureShown {
+                loginFailureShown = true
+                return
+            }
+        }
         window?.close()
     }
 
     private func makeWindow() -> NSWindow {
-        let view = OnboardingView(settings: settings) { [weak self] in self?.finish() }
+        let view = OnboardingView(settings: settings, loginItem: loginItem) { [weak self] in self?.finish() }
         let window = NSWindow(contentViewController: NSHostingController(rootView: view))
         window.title = "Set up just transcribe"
         window.styleMask.remove([.miniaturizable, .resizable])
         window.isReleasedWhenClosed = false
         window.center()
-        // Dropping the window on close ends the view's 1 s permission polling.
+        // Tearing down the hosting controller on close cancels the view's tasks, including the 1 s polling.
         closeObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification, object: window, queue: .main
         ) { [weak self] _ in
@@ -55,6 +63,8 @@ final class OnboardingWindowController {
     private func windowWillClose() {
         if let closeObserver { NotificationCenter.default.removeObserver(closeObserver) }
         closeObserver = nil
+        loginFailureShown = false
+        window?.contentViewController = nil
         window = nil
     }
 }

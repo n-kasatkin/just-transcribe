@@ -7,6 +7,7 @@ import SwiftUI
 /// Microphone, Accessibility, hotkey and engine, each with its live status and the action that sets it.
 struct OnboardingView: View {
     @Bindable var settings: SettingsModel
+    let loginItem: LoginItem
     let onDone: () -> Void
 
     @State private var microphone = MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio))
@@ -47,7 +48,12 @@ struct OnboardingView: View {
             .formStyle(.grouped)
 
             HStack {
-                Text(status.summary).foregroundStyle(.secondary)
+                if let error = loginItem.errorMessage {
+                    Text("Start at login failed: \(error) Press Done again to finish, or turn it on in Settings.")
+                        .foregroundStyle(.red)
+                } else {
+                    Text(status.summary).foregroundStyle(.secondary)
+                }
                 Spacer()
                 // No default-button shortcut: Return in the key field must save the key, not close the window.
                 Button("Done", action: onDone)
@@ -99,7 +105,13 @@ struct OnboardingView: View {
         SetupRow(title: "Engine", detail: engineDetail, done: settings.engineReadiness.isReady) { EmptyView() }
         HStack {
             Spacer()
-            Button("Paste an API key") { pastingKey.toggle() }
+            Button("Paste an API key") {
+                // Moves the shared provider choice only when opened, and never over a key being typed.
+                if !pastingKey, settings.keyDraft.isEmpty {
+                    settings.selectProvider(Onboarding.keyProvider(current: settings.currentModel))
+                }
+                pastingKey.toggle()
+            }
             offlineAction
         }
     }
@@ -107,7 +119,7 @@ struct OnboardingView: View {
     private var engineDetail: String {
         switch settings.engineReadiness {
         case .ready(let id): "Using \(id.description)."
-        case .missingKey(let id): "\(id.description) is selected, but \(id.provider) has no saved key."
+        case .missingKey(let id): "\(id.description) is selected, but \(OsttProvider.withID(id.provider)?.name ?? id.provider) has no saved key."
         case .noModel: "Use your own API key, or a model that runs on this Mac."
         }
     }
@@ -126,7 +138,7 @@ struct OnboardingView: View {
                 Button("Cancel") { settings.cancelDownload(item.id) }
             } else if item.installed == true {
                 Button("Use offline model") { Task { await settings.useLocalModel(item.id) } }
-                    .disabled(item.active)
+                    .disabled(settings.currentModel == item.id)
             } else {
                 Button(item.sizeMB.map { "Download offline model (\($0) MB)" } ?? "Download offline model") {
                     settings.download(item.id, thenUse: true)
@@ -170,14 +182,11 @@ struct OnboardingView: View {
 
     // MARK: Status
 
-    /// The key picker starts on the selected cloud provider, else ElevenLabs. The offline list (a network
-    /// fetch for the size in the button) loads only while no engine is set.
+    /// The offline list also gives the download size; it loads even with an engine set, since the engine
+    /// can stop being ready while the window is open.
     private func loadEngine() async {
         await settings.refreshEngine()
-        settings.selectProvider(Onboarding.keyProvider(current: settings.currentModel))
-        if !settings.engineReadiness.isReady {
-            await settings.loadOfflineModelsIfNeeded()
-        }
+        await settings.loadOfflineModelsIfNeeded()
     }
 
     private func refreshPermissions() {

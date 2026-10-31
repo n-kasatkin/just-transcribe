@@ -4,7 +4,9 @@ import SwiftUI
 
 @main
 struct JustTranscribeApp: App {
-    @State private var services = AppServices()
+    @NSApplicationDelegateAdaptor private var delegate: AppDelegate
+
+    private var services: AppServices { delegate.services }
 
     var body: some Scene {
         MenuBarExtra {
@@ -13,6 +15,15 @@ struct JustTranscribeApp: App {
         } label: {
             Label("just transcribe", systemImage: services.dictation.session.phase.menuBarSymbol)
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    let services = AppServices()
+
+    /// After launch, so the onboarding window can come to the front.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        services.onboardingWindow.showIfNeeded()
     }
 }
 
@@ -36,8 +47,6 @@ final class AppServices {
         self.settingsWindow = settingsWindow
         self.dictation = dictation
         onboardingWindow = OnboardingWindowController(settings: settings, loginItem: loginItem)
-        // Deferred until the app has finished launching, so the window can come to the front.
-        Task { [onboardingWindow] in onboardingWindow.showIfNeeded() }
     }
 }
 
