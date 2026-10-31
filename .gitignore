@@ -1,0 +1,23 @@
+# Local planning notes
+.docs/
+
+# macOS
+.DS_Store
+
+# Xcode / XcodeGen output
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+.derivedData/
+DerivedData/
+build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Downloaded ostt release (scripts/fetch-ostt.sh)
+vendor/
+
+# Release output
+dist/
