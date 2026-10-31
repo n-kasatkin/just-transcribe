@@ -8,9 +8,9 @@ struct JustTranscribeApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            AppMenu(dictation: services.dictation, settingsWindow: services.settingsWindow)
+            AppMenu(dictation: services.dictation, settingsWindow: services.settingsWindow, aboutWindow: services.aboutWindow)
         } label: {
-            Label("just transcribe", systemImage: services.dictation.session.phase.menuBarSymbol)
+            Label("just transcribe", image: services.dictation.session.phase.menuBarImage)
         }
     }
 }
@@ -19,6 +19,7 @@ struct JustTranscribeApp: App {
 final class AppServices {
     let dictation: DictationController
     let settingsWindow: SettingsWindowController
+    let aboutWindow: AboutWindowController
 
     init() {
         let paths = OsttPaths()
@@ -31,17 +32,18 @@ final class AppServices {
         let dictation = DictationController(runner: serial, paths: paths) { settingsWindow.show() }
         settings.onModelChange = { dictation.modelChanged() }
         self.settingsWindow = settingsWindow
+        aboutWindow = AboutWindowController(client: OsttSettingsClient(runner: process))
         self.dictation = dictation
     }
 }
 
 private extension DictationPhase {
-    var menuBarSymbol: String {
+    /// Template images from Assets.xcassets, drawn by scripts/make-icon.swift.
+    var menuBarImage: String {
         switch self {
-        case .idle: "waveform"
-        case .starting: "mic"
-        case .recording: "mic.fill"
-        case .transcribing: "ellipsis.circle"
+        case .idle: "MenuBarIdle"
+        case .starting, .recording: "MenuBarRecording"
+        case .transcribing: "MenuBarTranscribing"
         }
     }
 }
