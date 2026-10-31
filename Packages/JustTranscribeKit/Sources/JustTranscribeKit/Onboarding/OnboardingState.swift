@@ -62,6 +62,12 @@ public enum Onboarding {
     /// The provider the "Paste an API key" picker starts on.
     public static let defaultKeyProvider = "elevenlabs"
 
+    /// The key picker starts on the selected model's cloud provider, else on `defaultKeyProvider`.
+    public static func keyProvider(current: OsttModelID?) -> String {
+        guard let current, OsttProvider.withID(current.provider)?.needsKey == true else { return defaultKeyProvider }
+        return current.provider
+    }
+
     public static func shouldShowAtLaunch(_ defaults: UserDefaults) -> Bool {
         !defaults.bool(forKey: completedKey)
     }

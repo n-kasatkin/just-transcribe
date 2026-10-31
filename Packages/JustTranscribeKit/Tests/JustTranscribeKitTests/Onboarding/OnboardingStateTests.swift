@@ -55,8 +55,12 @@ struct OnboardingStateTests {
         #expect(!Onboarding.shouldShowAtLaunch(defaults))
     }
 
-    @Test func keyPickerStartsOnAKnownCloudProvider() {
+    @Test func keyPickerStartsOnTheSelectedCloudProviderElseElevenLabs() {
         #expect(OsttProvider.withID(Onboarding.defaultKeyProvider)?.needsKey == true)
+        #expect(Onboarding.keyProvider(current: nil) == "elevenlabs")
+        #expect(Onboarding.keyProvider(current: turbo) == "elevenlabs")
+        #expect(Onboarding.keyProvider(current: script) == "elevenlabs")
+        #expect(Onboarding.keyProvider(current: OsttModelID("openai/gpt-transcribe")) == "openai")
     }
 
     @Test func savingAKeySelectsTheProvidersFirstModel() {
