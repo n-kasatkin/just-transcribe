@@ -25,6 +25,7 @@ enum Signals {
         }
     }
 
+    /// A new folder under the system temp directory; suites remove it in `deinit`.
     static func temporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appending(path: "jt-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

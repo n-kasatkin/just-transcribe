@@ -50,8 +50,9 @@ final class PillController {
         self.panel = panel
         self.bars = bars
 
-        animation = Task { [bars] in
-            while !Task.isCancelled {
+        // Weak, so a released controller's task ends instead of redrawing an invisible view.
+        animation = Task { [weak bars] in
+            while !Task.isCancelled, let bars {
                 bars.needsDisplay = true
                 try? await Task.sleep(for: .milliseconds(33))
             }

@@ -14,6 +14,7 @@ public enum Take {
 
     /// Gates `samples` (16 kHz mono), saves the result to `store` in `container` and prunes the
     /// store to its newest recordings. Runs synchronously; call it off the main actor.
+    /// A failed prune does not fail the save.
     public static func save(
         _ samples: [Float], as container: AudioContainer, in store: RecordingStore, date: Date = .now
     ) throws -> TakeResult {
@@ -21,7 +22,8 @@ public enum Take {
         guard gated.speechDuration >= minimumSpeech else { return .nothingHeard }
         let url = try store.newRecordingURL(container, date: date)
         try AudioFileWriter.write(gated.samples, to: url, as: container)
-        try store.prune()
+        // The CLI prunes the same folder, so a file can vanish under us; the take is still good.
+        try? store.prune()
         return .saved(url, duration: Double(gated.samples.count) / Double(SpeechGate.sampleRate))
     }
 }

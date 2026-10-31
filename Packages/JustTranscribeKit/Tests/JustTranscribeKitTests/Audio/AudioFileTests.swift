@@ -2,7 +2,16 @@ import AVFoundation
 import Testing
 @testable import JustTranscribeKit
 
-struct AudioFileTests {
+final class AudioFileTests {
+    private let root: URL
+
+    init() throws {
+        root = try Signals.temporaryDirectory()
+    }
+
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+    }
     private func formatID(_ file: AVAudioFile) -> AudioFormatID {
         file.fileFormat.streamDescription.pointee.mFormatID
     }
@@ -22,7 +31,7 @@ struct AudioFileTests {
     }
 
     @Test func writesAACm4a() throws {
-        let url = try Signals.temporaryDirectory().appending(path: "take.m4a")
+        let url = root.appending(path: "take.m4a")
         // Noise keeps the encoder at its target rate; a pure tone needs far less.
         try AudioFileWriter.write(Signals.noise(seconds: 5, dbfs: -20), to: url, as: .m4a)
 
@@ -36,7 +45,7 @@ struct AudioFileTests {
     }
 
     @Test func writes16BitWAV() throws {
-        let url = try Signals.temporaryDirectory().appending(path: "take.wav")
+        let url = root.appending(path: "take.wav")
         try AudioFileWriter.write(Signals.tone(seconds: 2), to: url, as: .wav)
 
         let file = try AVAudioFile(forReading: url)
@@ -48,7 +57,7 @@ struct AudioFileTests {
     }
 
     @Test func convertsM4aToWAVBesideIt() throws {
-        let m4a = try Signals.temporaryDirectory().appending(path: "ostt-recording-20261031-120000-000.m4a")
+        let m4a = root.appending(path: "ostt-recording-20261031-120000-000.m4a")
         try AudioFileWriter.write(Signals.tone(seconds: 3), to: m4a, as: .m4a)
 
         let wav = try AudioConverter.wav(from: m4a)
@@ -63,8 +72,7 @@ struct AudioFileTests {
     }
 
     @Test func convertsFromOtherRatesAndChannels() throws {
-        let dir = try Signals.temporaryDirectory()
-        let source = dir.appending(path: "stereo.caf")
+        let source = root.appending(path: "stereo.caf")
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2))
         do {
             let file = try AVAudioFile(forWriting: source, settings: format.settings)
@@ -81,5 +89,26 @@ struct AudioFileTests {
         #expect(file.fileFormat.sampleRate == 16_000)
         #expect(file.fileFormat.channelCount == 1)
         #expect(abs(seconds(file) - 1) < 0.01)
+    }
+
+    @Test func wavSourceIsReturnedUntouched() throws {
+        let wav = root.appending(path: "ostt-recording-20261031-120000-000.wav")
+        try AudioFileWriter.write(Signals.tone(seconds: 1), to: wav, as: .wav)
+        let before = try Data(contentsOf: wav)
+
+        #expect(try AudioConverter.wav(from: wav) == wav)
+        #expect(try Data(contentsOf: wav) == before)
+    }
+
+    @Test func failedWriteLeavesNoFile() throws {
+        let url = root.appending(path: "ostt-recording-20261031-120000-000.m4a")
+        // An unsupported bit rate fails after the file has been created.
+        var settings = AudioContainer.m4a.settings
+        settings[AVEncoderBitRateKey] = 1
+
+        #expect(throws: (any Error).self) {
+            try AudioFileWriter.write(Signals.tone(seconds: 1), to: url, settings: settings)
+        }
+        #expect(!FileManager.default.fileExists(atPath: url.path(percentEncoded: false)))
     }
 }

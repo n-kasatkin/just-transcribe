@@ -16,9 +16,9 @@ final class SampleConverter {
     }
 
     /// The samples `buffer` yields so far; the resampler may hold a few back until the next call.
-    func convert(_ buffer: AVAudioPCMBuffer) -> [Float] {
+    func convert(_ buffer: AVAudioPCMBuffer) throws -> [Float] {
         var supplied = false
-        return drain(capacity: buffer.frameLength) { _, status in
+        return try drain(capacity: buffer.frameLength) { _, status in
             guard !supplied else {
                 status.pointee = .noDataNow
                 return nil
@@ -30,25 +30,26 @@ final class SampleConverter {
     }
 
     /// The samples still held by the resampler; the converter is ready for a new stream afterwards.
-    func finish() -> [Float] {
+    func finish() throws -> [Float] {
         defer { converter.reset() }
-        return drain(capacity: 4096) { _, status in
+        return try drain(capacity: 4096) { _, status in
             status.pointee = .endOfStream
             return nil
         }
     }
 
-    private func drain(capacity inputFrames: AVAudioFrameCount, input: AVAudioConverterInputBlock) -> [Float] {
+    private func drain(capacity inputFrames: AVAudioFrameCount, input: AVAudioConverterInputBlock) throws -> [Float] {
         let ratio = Self.format.sampleRate / converter.inputFormat.sampleRate
         let capacity = AVAudioFrameCount((Double(inputFrames) * ratio).rounded(.up)) + 256
         var samples: [Float] = []
         while true {
-            guard let output = AVAudioPCMBuffer(pcmFormat: Self.format, frameCapacity: capacity) else { return samples }
+            guard let output = AVAudioPCMBuffer(pcmFormat: Self.format, frameCapacity: capacity),
+                  let data = output.floatChannelData
+            else { throw CocoaError(.featureUnsupported) }
             var error: NSError?
             let status = converter.convert(to: output, error: &error, withInputFrom: input)
-            if let data = output.floatChannelData, status != .error {
-                samples.append(contentsOf: UnsafeBufferPointer(start: data[0], count: Int(output.frameLength)))
-            }
+            if status == .error { throw error ?? CocoaError(.featureUnsupported) }
+            samples.append(contentsOf: UnsafeBufferPointer(start: data[0], count: Int(output.frameLength)))
             guard status == .haveData else { return samples }
         }
     }

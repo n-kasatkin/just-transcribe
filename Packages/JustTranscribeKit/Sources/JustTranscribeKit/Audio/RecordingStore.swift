@@ -13,13 +13,13 @@ public struct RecordingStore: Sendable {
     }
 
     /// A new file URL `ostt-recording-YYYYmmdd-HHMMSS-mmm.<ext>` in local time; creates the
-    /// directory with mode 0700 when it is missing, as ostt does.
+    /// directory if needed and sets it to mode 0700, as ostt does.
     public func newRecordingURL(
         _ container: AudioContainer, date: Date = .now, timeZone: TimeZone = .current
     ) throws -> URL {
-        try FileManager.default.createDirectory(
-            at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
-        )
+        // Parents get the default mode; only the recordings folder is private, also when it existed.
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path(percentEncoded: false))
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = Calendar(identifier: .gregorian)

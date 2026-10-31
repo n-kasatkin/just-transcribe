@@ -24,10 +24,14 @@ public enum LevelMeter {
 public final class Recorder {
     /// Called on the main actor about 30 times a second while recording, with a level in 0...1.
     public var onLevel: ((Double) -> Void)?
+    /// Called on the main actor when the input device changes mid-recording and the system stops
+    /// the engine. Capture has ended: call `stop()` to keep the take so far, or `cancel()`.
+    public var onInterrupted: (() -> Void)?
 
     private var engine: AVAudioEngine?
     private var buffer: RecordingBuffer?
     private var meter: Task<Void, Never>?
+    private var configurationObserver: (any NSObjectProtocol)?
 
     public init() {}
 
@@ -56,6 +60,11 @@ public final class Recorder {
         }
         self.engine = engine
         self.buffer = buffer
+        configurationObserver = NotificationCenter.default.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.onInterrupted?() }
+        }
         meter = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(33))
@@ -67,9 +76,10 @@ public final class Recorder {
 
     /// Stops capturing and returns everything recorded since `start()`.
     public func stop() -> [Float] {
-        let samples = buffer?.finish() ?? []
+        let buffer = self.buffer
+        // Remove the tap first so no callback converts after the stream is finished.
         tearDown()
-        return samples
+        return buffer?.finish() ?? []
     }
 
     /// Stops capturing and discards the recording.
@@ -80,6 +90,10 @@ public final class Recorder {
     private func tearDown() {
         meter?.cancel()
         meter = nil
+        if let configurationObserver {
+            NotificationCenter.default.removeObserver(configurationObserver)
+        }
+        configurationObserver = nil
         if let engine {
             engine.inputNode.removeTap(onBus: 0)
             engine.stop()
@@ -115,10 +129,11 @@ final class RecordingBuffer: @unchecked Sendable {
 
     var level: Double { state.withLockUnchecked { $0.level } }
 
+    /// Converts and keeps `buffer`; a buffer the converter rejects is dropped, as the audio
+    /// thread has nobody to report to.
     func append(_ buffer: AVAudioPCMBuffer) {
         state.withLockUnchecked { state in
-            let converted = state.converter.convert(buffer)
-            guard !converted.isEmpty else { return }
+            guard let converted = try? state.converter.convert(buffer), !converted.isEmpty else { return }
             state.level = LevelMeter.level(rms: converted.withUnsafeBufferPointer { vDSP.rootMeanSquare($0) })
             state.samples.append(contentsOf: converted)
         }
@@ -127,7 +142,7 @@ final class RecordingBuffer: @unchecked Sendable {
     /// All samples so far, including those the resampler still held.
     func finish() -> [Float] {
         state.withLockUnchecked { state in
-            state.samples.append(contentsOf: state.converter.finish())
+            state.samples.append(contentsOf: (try? state.converter.finish()) ?? [])
             return state.samples
         }
     }

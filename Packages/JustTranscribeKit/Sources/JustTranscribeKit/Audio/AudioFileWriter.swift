@@ -33,10 +33,25 @@ public enum AudioContainer: String, Sendable, CaseIterable {
 /// Writes 16 kHz mono Float samples to an audio file.
 public enum AudioFileWriter {
     /// Writes `samples` to `url`, overwriting it. The file type follows the URL's extension, so
-    /// name it with `container.fileExtension`. The file is closed when this returns.
+    /// name it with `container.fileExtension`. The file is closed when this returns; on failure
+    /// it is removed, so no partial file is left for `latestRecording()` or `ostt retry`.
     public static func write(_ samples: [Float], to url: URL, as container: AudioContainer) throws {
+        try write(samples, to: url, settings: container.settings)
+    }
+
+    static func write(_ samples: [Float], to url: URL, settings: [String: Any]) throws {
+        do {
+            try writeFile(samples, to: url, settings: settings)
+        } catch {
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
+    }
+
+    // Separate so the AVAudioFile is closed before a failed file is removed.
+    private static func writeFile(_ samples: [Float], to url: URL, settings: [String: Any]) throws {
         let file = try AVAudioFile(
-            forWriting: url, settings: container.settings, commonFormat: .pcmFormatFloat32, interleaved: false
+            forWriting: url, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false
         )
         let chunk = 16_384
         for start in stride(from: 0, to: samples.count, by: chunk) {

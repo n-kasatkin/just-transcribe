@@ -2,10 +2,19 @@ import Foundation
 import Testing
 @testable import JustTranscribeKit
 
-struct RecordingStoreTests {
+final class RecordingStoreTests {
+    private let root: URL
+
+    init() throws {
+        root = try Signals.temporaryDirectory()
+    }
+
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+    }
+
     private func makeStore() throws -> RecordingStore {
-        let root = try Signals.temporaryDirectory()
-        return RecordingStore(paths: OsttPaths(
+        RecordingStore(paths: OsttPaths(
             configDirectory: root.appending(path: "config/ostt", directoryHint: .isDirectory),
             dataDirectory: root.appending(path: "data/ostt", directoryHint: .isDirectory)
         ))
@@ -31,6 +40,21 @@ struct RecordingStoreTests {
         _ = try store.newRecordingURL(.m4a)
         let attributes = try FileManager.default.attributesOfItem(atPath: store.directory.path(percentEncoded: false))
         #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+    }
+
+    @Test func tightensAnExistingDirectory() throws {
+        let store = try makeStore()
+        try FileManager.default.createDirectory(
+            at: store.directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o755]
+        )
+        _ = try store.newRecordingURL(.m4a)
+        #expect(try mode(store.directory) == 0o700)
+        #expect(try mode(store.directory.deletingLastPathComponent()) != 0o700)
+    }
+
+    private func mode(_ url: URL) throws -> Int? {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path(percentEncoded: false))
+        return (attributes[.posixPermissions] as? NSNumber)?.intValue
     }
 
     @Test func latestAndPruneTouchOnlyRecordings() throws {
