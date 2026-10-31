@@ -68,7 +68,7 @@ private struct OfflineModelRow: View {
         } else if item.installed == true {
             Button("Remove", role: .destructive) { Task { await model.removeLocalModel(item.id) } }
             Button("Use") { Task { await model.useLocalModel(item.id) } }
-                .disabled(item.active)
+                .disabled(model.currentModel == item.id)
         } else {
             Button("Download") { model.download(item.id) }
         }

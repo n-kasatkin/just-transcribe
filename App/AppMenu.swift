@@ -7,6 +7,7 @@ import SwiftUI
 struct AppMenu: View {
     let dictation: DictationController
     let settingsWindow: SettingsWindowController
+    let onboardingWindow: OnboardingWindowController
 
     var body: some View {
         let session = dictation.session
@@ -28,6 +29,7 @@ struct AppMenu: View {
             Button("Allow Microphone Access…") { NSWorkspace.shared.open(PrivacyPane.microphone.url) }
         }
         Divider()
+        Button("Setup…") { onboardingWindow.show() }
         Button("Settings…") { settingsWindow.show() }
             .keyboardShortcut(",")
         Button("Check for Updates…") { NSWorkspace.shared.open(Self.releasesURL) }
