@@ -12,18 +12,19 @@ public enum TakeResult: Sendable, Equatable {
 public enum Take {
     public static let minimumSpeech = 0.2
 
-    /// Gates `samples` (16 kHz mono), saves the result to `store` in `container` and prunes the
-    /// store to its newest recordings. Runs synchronously; call it off the main actor.
-    /// A failed prune does not fail the save.
+    /// Gates `samples` (16 kHz mono), saves the result to `store` in `container` and deletes the
+    /// store's recordings older than `retention`. Runs synchronously; call it off the main actor.
     public static func save(
-        _ samples: [Float], as container: AudioContainer, in store: RecordingStore, date: Date = .now
+        _ samples: [Float], as container: AudioContainer, in store: RecordingStore,
+        retention: RetentionPeriod = .never, date: Date = .now
     ) throws -> TakeResult {
         let gated = SpeechGate.apply(to: samples)
         guard gated.speechDuration >= minimumSpeech else { return .nothingHeard }
         let url = try store.newRecordingURL(container, date: date)
         try AudioFileWriter.write(gated.samples, to: url, as: container)
-        // The CLI prunes the same folder, so a file can vanish under us; the take is still good.
-        try? store.prune()
+        if let cutoff = retention.cutoff(before: date) {
+            store.deleteRecordings(olderThan: cutoff)
+        }
         return .saved(url, duration: Double(gated.samples.count) / Double(SpeechGate.sampleRate))
     }
 }

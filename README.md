@@ -41,7 +41,30 @@ On first launch a setup window walks you through four things.
 3. **A hotkey.** There is no default; you pick one.
 4. **An engine.** Paste an API key for a cloud provider (OpenAI, Deepgram, DeepInfra, Groq, AssemblyAI, Berget, ElevenLabs or Mistral), or download an offline model.
 
-You can reopen this window from the menu-bar icon: **Setup…**. Start at login is a toggle in Settings.
+You can reopen this window from the menu-bar icon: **Setup…**. Start at login is a toggle in **Settings → General**, and so is the menu-bar icon: with the icon hidden, open just transcribe again from Applications or Spotlight to get Settings. The hotkey keeps working.
+
+## History and storage
+
+**Settings → History** lists your earlier transcripts, newest first, with a **Copy** button on each. **Settings → Storage** sets how long recordings and history are kept and which folder new recordings go to.
+
+## Bring your own keys
+
+just transcribe has no account and no subscription: you use your own API key, and the provider bills you directly. Any provider ostt supports works; these two are the tested ones.
+
+- **ElevenLabs** — Scribe v2. Strong on Russian, English and speech that mixes them.
+- **Deepgram** — Nova 3. Fast and inexpensive, best on English.
+
+To add a key:
+
+1. Create the key.
+   - ElevenLabs: sign in and open [API keys](https://elevenlabs.io/app/settings/api-keys), then **Create API key**. If you restrict the key, give it the **Speech to Text** permission.
+   - Deepgram: sign in to the [Deepgram console](https://console.deepgram.com/), open your project's **API Keys** and create a key.
+2. Copy the key. Both sites show it only once.
+3. Open **Settings → Transcription**, choose the provider, paste the key into **Paste a new key** and press **Save**.
+4. Pick a model: **Scribe v2 (general purpose)** for ElevenLabs, **Nova 3 (general purpose)** for Deepgram.
+5. Press your hotkey and dictate a sentence to check.
+
+ostt stores keys in `~/.local/share/ostt/credentials`, readable only by your user. **Remove** on the same tab deletes a key.
 
 ## Offline models
 
@@ -57,7 +80,9 @@ Add names, product terms and jargon in **Settings → Keywords**. ostt passes th
 
 - Your API keys sit in ostt's `credentials` file, mode 0600, in `~/.local/share/ostt`. Not in the Keychain.
 - Your audio goes only to the provider you chose. With an offline model it never leaves your Mac.
-- ostt keeps the newest 10 recordings, the transcript history with no automatic deletion, and 7 days of logs in `~/.local/share/ostt`.
+- Recordings go to ostt's `~/.local/share/ostt/recordings`, or the folder you choose in **Settings → Storage**. The app deletes them after 3 days by default, also in folders you used before; you can pick 1, 7 or 30 days, or Forever. A folder you choose keeps its permissions; a folder the app creates is readable only by you.
+- The app keeps the newest 500 transcripts in `~/Library/Application Support/just transcribe/history.json`, mode 0600, so you can copy one again. Entries older than 30 days are deleted by default (1, 3 or 7 days, or Forever, in **Settings → Storage**); **Clear History** deletes them all.
+- ostt keeps its own transcript history with no automatic deletion, and 7 days of logs, in `~/.local/share/ostt`.
 - The model list comes from GitHub when you open Offline models. Models download from Hugging Face.
 - The app itself sends nothing anywhere else. Its source has no networking code. Its only URLs are links it opens in your browser: the releases page (**Check for Updates…**) and the project pages in the About window.
 

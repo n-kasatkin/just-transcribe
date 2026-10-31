@@ -23,6 +23,8 @@ public final class DictationSession {
         public var transcribe: @Sendable (URL, Duration) async throws -> String
         public var paste: @MainActor (String) async -> Paster.Outcome
         public var copy: @MainActor (String) -> Bool
+        /// Keeps a successful transcript in the history.
+        public var recordTranscript: @MainActor (String) -> Void
 
         public init(
             microphoneAccess: @escaping @MainActor () -> MicrophoneAccess,
@@ -36,7 +38,8 @@ public final class DictationSession {
             prepareRetry: @escaping @Sendable (URL, ActiveModel) throws -> (file: URL, duration: Duration),
             transcribe: @escaping @Sendable (URL, Duration) async throws -> String,
             paste: @escaping @MainActor (String) async -> Paster.Outcome,
-            copy: @escaping @MainActor (String) -> Bool
+            copy: @escaping @MainActor (String) -> Bool,
+            recordTranscript: @escaping @MainActor (String) -> Void
         ) {
             self.microphoneAccess = microphoneAccess
             self.requestMicrophone = requestMicrophone
@@ -50,13 +53,15 @@ public final class DictationSession {
             self.transcribe = transcribe
             self.paste = paste
             self.copy = copy
+            self.recordTranscript = recordTranscript
         }
 
-        /// The app's wiring: the real microphone, ostt through `models` and `transcriber`, ostt's
-        /// recordings folder and the system pasteboard.
+        /// The app's wiring: the real microphone, ostt through `models` and `transcriber`, the recordings
+        /// folder and retention from `preferences` as they are at each take, and the system pasteboard.
         @MainActor
         public static func live(
-            recorder: Recorder, models: ActiveModelCache, transcriber: Transcriber, store: RecordingStore, paster: Paster
+            recorder: Recorder, models: ActiveModelCache, transcriber: Transcriber, preferences: AppPreferences,
+            history: HistoryStore, paster: Paster
         ) -> Dependencies {
             Dependencies(
                 microphoneAccess: { MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio)) },
@@ -65,12 +70,13 @@ public final class DictationSession {
                 startRecording: { try recorder.start() },
                 stopRecording: { recorder.stop() },
                 cancelRecording: { recorder.cancel() },
-                save: { try Take.save($0, as: $1, in: store) },
-                latestRecording: { store.latestRecording() },
+                save: { try Take.save($0, as: $1, in: preferences.recordingStore, retention: preferences.recordingRetention) },
+                latestRecording: { preferences.recordingStore.latestRecording() },
                 prepareRetry: { try RetryTake.prepare($0, for: $1) },
                 transcribe: { try await transcriber.transcribe(file: $0, audioDuration: $1) },
                 paste: { await paster.paste($0) },
-                copy: { Paster.writeGeneralPasteboard($0) }
+                copy: { Paster.writeGeneralPasteboard($0) },
+                recordTranscript: { history.add($0) }
             )
         }
     }
@@ -227,12 +233,13 @@ public final class DictationSession {
         let text = try await dependencies.transcribe(file, duration)
         guard id == generation else { return }
         lastTranscript = text
+        dependencies.recordTranscript(text)
         let outcome = await dependencies.paste(text)
         guard id == generation else { return }
         finish(.paste(outcome))
     }
 
-    /// Any saved recording stays in ostt's folder for Retry Last.
+    /// Any saved recording stays in the recordings folder for Retry Last.
     private func fail(_ error: any Error) {
         switch error {
         case DictationError.microphoneDenied, RecorderError.microphoneNotAuthorized:

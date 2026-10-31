@@ -50,32 +50,25 @@ final class TakeTests {
         #expect(abs(Double(file.length) / 16_000 - 1.6) < 0.1)
     }
 
-    @Test func failedPruneKeepsTheSavedTake() throws {
+    @Test func savingDeletesRecordingsPastTheRetention() throws {
         let store = try makeStore()
         let speech = Signals.tone(seconds: 0.5)
-        for i in 0..<10 {
-            _ = try Take.save(speech, as: .wav, in: store, date: Date(timeIntervalSince1970: 1_793_448_000 + Double(i)))
-        }
-        // The oldest take is due for pruning but cannot be deleted.
-        let oldest = try #require(store.recordings().last)
-        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: oldest.path(percentEncoded: false))
-        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: oldest.path(percentEncoded: false)) }
-
-        let result = try Take.save(speech, as: .wav, in: store, date: Date(timeIntervalSince1970: 1_793_448_100))
+        // Distinct seconds, so no two takes share a name.
+        let now = Date.now
+        _ = try Take.save(speech, as: .wav, in: store, date: now.addingTimeInterval(-2 * 86_400))
+        let old = try #require(store.latestRecording())
+        _ = try Take.save(speech, as: .wav, in: store, retention: .sevenDays, date: now)
+        #expect(store.recordings().count == 2)
+        _ = try Take.save(speech, as: .wav, in: store, retention: .never, date: now + 1)
+        #expect(store.recordings().count == 3)
+        let result = try Take.save(speech, as: .wav, in: store, retention: .oneDay, date: now + 2)
 
         guard case let .saved(url, _) = result else {
             Issue.record("expected a saved take, got \(result)")
             return
         }
+        #expect(store.recordings().count == 3)
+        #expect(!store.recordings().contains(old))
         #expect(store.latestRecording() == url)
-    }
-
-    @Test func savingPrunesToTen() throws {
-        let store = try makeStore()
-        let speech = Signals.tone(seconds: 0.5)
-        for i in 0..<12 {
-            _ = try Take.save(speech, as: .wav, in: store, date: Date(timeIntervalSince1970: 1_793_448_000 + Double(i)))
-        }
-        #expect(store.recordings().count == 10)
     }
 }

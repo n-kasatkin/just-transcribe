@@ -54,7 +54,7 @@ public enum DictationError: Error, Sendable, Equatable {
     case microphoneDenied
     /// `ostt model current` reports no model.
     case noModel
-    /// Retry found no recording in ostt's folder.
+    /// Retry found no recording in the recordings folder.
     case noRecording
 }
 
@@ -99,6 +99,8 @@ public enum DictationFeedback: Sendable, Equatable {
             .error("No microphone")
         case RecorderError.engineFailed:
             .error("Microphone failed")
+        case RecordingStore.Failure.folderUnavailable:
+            .error("Recordings folder unavailable")
         case is ActiveModel.ParseError:
             .error("Unknown engine")
         default:

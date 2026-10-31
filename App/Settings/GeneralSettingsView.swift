@@ -4,12 +4,15 @@ import JustTranscribeKit
 import KeyboardShortcuts
 import SwiftUI
 
-/// Shortcut, start at login and permission status. Checks never prompt; they refresh whenever the
+/// Shortcut, start at login, the menu-bar icon and permission status. Checks never prompt; they refresh whenever the
 /// window becomes key or the app becomes active, so a change made in System Settings shows on return.
 struct GeneralSettingsView: View {
     let loginItem: LoginItem
     @State private var microphone = MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio))
     @State private var accessibility = AXIsProcessTrusted()
+    @AppStorage(AppPreferences.showMenuBarIconKey) private var showMenuBarIcon = true
+    @AppStorage(AppPreferences.hideMenuBarIconConfirmedKey) private var hideConfirmed = false
+    @State private var confirmingHide = false
 
     var body: some View {
         Form {
@@ -32,6 +35,15 @@ struct GeneralSettingsView: View {
                 if let error = loginItem.errorMessage {
                     Label(error, systemImage: "xmark.octagon.fill").foregroundStyle(.red)
                 }
+            }
+
+            Section {
+                Toggle("Show icon in the menu bar", isOn: Binding(get: { showMenuBarIcon }, set: setShowMenuBarIcon))
+                if !showMenuBarIcon {
+                    Button("Quit just transcribe") { NSApp.terminate(nil) }
+                }
+            } footer: {
+                Text("With the icon hidden, open just transcribe again from Applications or Spotlight to see Settings. The shortcut keeps working.")
             }
 
             Section("Permissions") {
@@ -59,12 +71,30 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .alert("Hide the menu-bar icon?", isPresented: $confirmingHide) {
+            Button("Hide Icon") {
+                hideConfirmed = true
+                showMenuBarIcon = false
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("To come back to Settings, open just transcribe again from Applications or Spotlight. The dictation shortcut keeps working.")
+        }
         .onAppear(perform: refresh)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refresh()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             refresh()
+        }
+    }
+
+    /// Hiding asks once, so the user learns the way back before the icon is gone.
+    private func setShowMenuBarIcon(_ show: Bool) {
+        if !show && !hideConfirmed {
+            confirmingHide = true
+        } else {
+            showMenuBarIcon = show
         }
     }
 

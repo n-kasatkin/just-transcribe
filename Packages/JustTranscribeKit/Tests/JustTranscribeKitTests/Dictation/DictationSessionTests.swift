@@ -12,6 +12,7 @@ struct DictationSessionTests {
         var recordingsStarted = 0
         var recordingsCancelled = 0
         var pasted: [String] = []
+        var recorded: [String] = []
         var feedback: [DictationFeedback] = []
         var phases: [DictationPhase] = []
         var noModelCalls = 0
@@ -52,7 +53,8 @@ struct DictationSessionTests {
                     self.pasted.append(text)
                     return await paste?(text) ?? .pasted
                 },
-                copy: { _ in true }
+                copy: { _ in true },
+                recordTranscript: { self.recorded.append($0) }
             ), maxRecordingDuration: maxRecordingDuration)
             session.onPhaseChange = { self.phases.append($0) }
             session.onFeedback = { self.feedback.append($0) }
@@ -83,6 +85,7 @@ struct DictationSessionTests {
         #expect(harness.containers.values == [.wav])
         #expect(harness.pasted == ["привет"])
         #expect(harness.session.lastTranscript == "привет")
+        #expect(harness.recorded == ["привет"])
         #expect(harness.feedback == [.hidden])
     }
 
@@ -165,6 +168,7 @@ struct DictationSessionTests {
         #expect(harness.session.phase == .idle)
         await pending?.value
         #expect(harness.pasted.isEmpty)
+        #expect(harness.recorded.isEmpty)
         #expect(harness.session.lastTranscript == nil)
         #expect(harness.feedback == [.hidden])
     }
@@ -260,7 +264,16 @@ struct DictationSessionTests {
         await harness.session.work?.value
         #expect(harness.transcribed.values == [file])
         #expect(harness.pasted == ["привет"])
+        #expect(harness.recorded == ["привет"])
         #expect(harness.session.phase == .idle)
+    }
+
+    @Test func failedRetryRecordsNothing() async {
+        let harness = Harness(latest: URL(filePath: "/ostt-recording-1.m4a"), transcribe: { _, _ in throw OsttError.timedOut })
+        harness.session.retryLast()
+        await harness.session.work?.value
+        #expect(harness.recorded.isEmpty)
+        #expect(harness.feedback == [.error("Timed out")])
     }
 
     @Test func retryWithoutARecordingSaysSo() {
@@ -277,6 +290,7 @@ struct DictationSessionTests {
         await harness.session.work?.value
         #expect(harness.session.phase == .idle)
         #expect(harness.feedback == [.error("Timed out")])
+        #expect(harness.recorded.isEmpty)
         #expect(harness.session.phase.onToggle == .start)
     }
 }

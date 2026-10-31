@@ -17,13 +17,15 @@ final class DictationController {
     private var menuObserver: (any NSObjectProtocol)?
 
     /// - Parameter runner: the serial queue shared with Settings' config writes.
-    init(runner: any OsttRunning, paths: OsttPaths, openSettings: @escaping () -> Void) {
+    init(
+        runner: any OsttRunning, preferences: AppPreferences, history: HistoryStore, openSettings: @escaping () -> Void
+    ) {
         let recorder = Recorder()
-        let models = ActiveModelCache(runner: runner, configFile: paths.configFile)
+        let models = ActiveModelCache(runner: runner, configFile: preferences.paths.configFile)
         self.models = models
         session = DictationSession(.live(
             recorder: recorder, models: models, transcriber: Transcriber(runner: runner),
-            store: RecordingStore(paths: paths), paster: Paster()
+            preferences: preferences, history: history, paster: Paster()
         ))
         recorder.onLevel = { [weak self] in self?.pill.setLevel($0) }
         recorder.onInterrupted = { [weak self] in self?.session.interrupted() }
