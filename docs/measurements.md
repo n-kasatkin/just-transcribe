@@ -4,7 +4,7 @@ The numbers behind "light" in the README, measured by `scripts/measure.sh`.
 
 - Date: 2026-10-31
 - Machine: Apple Silicon Mac (arm64), macOS 26.6.2 (25G83)
-- Build: commit `010a1bf`, Release configuration, arm64, ostt 0.0.34 helper, Xcode 27.2. Signed with Apple Development under the bundle id `dev.actionhook.justtranscribe.dev` instead of Developer ID; code and resources are the same as a release build.
+- Build: commit `3255a83`, Release configuration, arm64, ostt 0.0.34 helper, Xcode 27.2. Signed with Apple Development under the bundle id `dev.actionhook.justtranscribe.dev` instead of Developer ID; code and resources are the same as a release build.
 - DMG: built like `scripts/release.sh` (UDZO, HFS+, the app and an Applications link), unsigned.
 
 ## Size
