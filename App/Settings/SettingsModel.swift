@@ -30,6 +30,9 @@ final class SettingsModel {
     var keywordDraft = ""
     private(set) var keywordError: String?
 
+    /// Called after a model is selected or removed, so dictation re-reads the active model.
+    @ObservationIgnored var onModelChange: (() -> Void)?
+
     /// - Parameter configRunner: the queue shared with transcription for calls that change `ostt.toml`;
     ///   without one, those calls are serialized among the settings only.
     init(runner: any OsttRunning, configRunner: (any OsttRunning)? = nil, paths: OsttPaths) {
@@ -94,6 +97,7 @@ final class SettingsModel {
         } catch {
             transcriptionError = SettingsState.message(for: error)
         }
+        onModelChange?()
         await refreshCurrentModel()
         await loadCloudModels()
     }
@@ -178,12 +182,14 @@ final class SettingsModel {
 
     func useLocalModel(_ id: OsttModelID) async {
         await runOffline { try await self.client.selectModel(id) }
+        onModelChange?()
         await refreshCurrentModel()
         await loadLocalModels()
     }
 
     func removeLocalModel(_ id: OsttModelID) async {
         await runOffline { try await self.client.removeModel(id) }
+        onModelChange?()
         await refreshCurrentModel()
         await loadLocalModels()
     }
