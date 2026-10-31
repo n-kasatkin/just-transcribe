@@ -36,6 +36,8 @@ public struct AppPreferences: @unchecked Sendable {
     public static let showMenuBarIconKey = "showMenuBarIcon"
     /// Set once the user confirmed hiding the icon, so the explanation shows only the first time.
     public static let hideMenuBarIconConfirmedKey = "hideMenuBarIconConfirmed"
+    /// JSON of provider id → param name → `ParamValue`; a provider missing here uses `ProviderParams.defaults`.
+    public static let providerParamsKey = "providerParams"
 
     public static let defaultRecordingRetention = RetentionPeriod.threeDays
     public static let defaultHistoryRetention = RetentionPeriod.thirtyDays
@@ -58,6 +60,30 @@ public struct AppPreferences: @unchecked Sendable {
 
     public var showMenuBarIcon: Bool {
         defaults.object(forKey: Self.showMenuBarIconKey) as? Bool ?? true
+    }
+
+    /// The params sent with every transcription by this provider's models.
+    public func providerParams(_ provider: String) -> [String: ParamValue] {
+        storedProviderParams()[provider] ?? ProviderParams.defaults[provider] ?? [:]
+    }
+
+    /// Stores `values` for the provider, an empty set included, so its defaults no longer apply.
+    public func setProviderParams(_ values: [String: ParamValue], for provider: String) {
+        var stored = storedProviderParams()
+        stored[provider] = values
+        defaults.set(try? JSONEncoder().encode(stored), forKey: Self.providerParamsKey)
+    }
+
+    /// Back to `ProviderParams.defaults`.
+    public func resetProviderParams(_ provider: String) {
+        var stored = storedProviderParams()
+        stored[provider] = nil
+        defaults.set(try? JSONEncoder().encode(stored), forKey: Self.providerParamsKey)
+    }
+
+    private func storedProviderParams() -> [String: [String: ParamValue]] {
+        defaults.data(forKey: Self.providerParamsKey)
+            .flatMap { try? JSONDecoder().decode([String: [String: ParamValue]].self, from: $0) } ?? [:]
     }
 
     /// The chosen folder, or ostt's when none is set. Read at each use, so a change applies to the next take.

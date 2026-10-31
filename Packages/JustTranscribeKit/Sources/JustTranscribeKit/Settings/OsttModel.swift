@@ -72,6 +72,19 @@ enum OsttOutput {
         }
     }
 
+    private struct ParamsOutput: Decodable {
+        struct Param: Decodable {
+            var name: String
+            var type: String
+        }
+        var params: [Param]
+    }
+
+    /// `model params MODEL --format json`: `{"provider", "model", "params": [{"name", "type"}]}`.
+    static func modelParams(_ json: String) throws -> [ModelParam] {
+        try decode(ParamsOutput.self, json).params.map { ModelParam(name: $0.name, kind: ModelParam.Kind(osttType: $0.type)) }
+    }
+
     /// `keyword list --format json` and `auth list --format json` both print a string array.
     static func strings(_ json: String) throws -> [String] {
         try decode([String].self, json)

@@ -2,13 +2,16 @@ import AppKit
 import JustTranscribeKit
 import Observation
 
-/// State and actions behind the Transcription, Offline models and Keywords tabs. Every ostt call goes
-/// through the injected runners; API keys go straight to ostt's credentials file.
+/// State and actions behind the Transcription, Offline models and Keywords panes. Every ostt call goes
+/// through the injected runners; API keys go straight to ostt's credentials file, provider params to
+/// the app's preferences.
 @Observable
 final class SettingsModel {
     let paths: OsttPaths
     private let client: OsttSettingsClient
+    private let preferences: AppPreferences
     private let credentials: CredentialsStore
+    private let paramValidator: OsttParamValidator?
 
     // Transcription
     private(set) var providerID = OsttProvider.cloud[0].id
@@ -18,6 +21,11 @@ final class SettingsModel {
     private(set) var cloudModels: Loadable<[OsttModel]> = .idle
     private(set) var currentModel: OsttModelID?
     private(set) var transcriptionError: String?
+
+    // Provider options
+    private(set) var modelParams: [OsttModelID: Loadable<[ModelParam]>] = [:]
+    /// Each provider's values as last read or written, so the options redraw when they change.
+    private var paramValues: [String: [String: ParamValue]] = [:]
 
     // Offline models
     private(set) var localModels: [String: Loadable<[OsttModel]>] = [:]
@@ -35,10 +43,17 @@ final class SettingsModel {
     /// Called after a model is selected or removed, so dictation re-reads the active model.
     @ObservationIgnored var onModelChange: (() -> Void)?
 
-    /// - Parameter configRunner: the queue shared with transcription for calls that change `ostt.toml`;
-    ///   without one, those calls are serialized among the settings only.
-    init(runner: any OsttRunning, configRunner: (any OsttRunning)? = nil, paths: OsttPaths) {
-        self.paths = paths
+    /// - Parameters:
+    ///   - configRunner: the queue shared with transcription for calls that change `ostt.toml`;
+    ///     without one, those calls are serialized among the settings only.
+    ///   - paramValidator: checks a provider option's range and allowed values before it is saved.
+    init(
+        runner: any OsttRunning, configRunner: (any OsttRunning)? = nil, paramValidator: OsttParamValidator? = nil,
+        preferences: AppPreferences
+    ) {
+        paths = preferences.paths
+        self.preferences = preferences
+        self.paramValidator = paramValidator
         client = OsttSettingsClient(runner: runner, configRunner: configRunner ?? SerialOsttRunner(runner), paths: paths)
         credentials = CredentialsStore(paths: paths)
     }
@@ -156,6 +171,42 @@ final class SettingsModel {
 
     private func refreshCurrentModel() async {
         currentModel = try? await client.currentModel()
+    }
+
+    // MARK: Provider options
+
+    /// Asks ostt once per model which params it takes.
+    func loadModelParams(_ id: OsttModelID) async {
+        guard modelParams[id]?.value == nil else { return }
+        modelParams[id] = .loading
+        do {
+            modelParams[id] = .loaded(try await client.modelParams(id))
+        } catch {
+            modelParams[id] = .failed(SettingsState.message(for: error))
+        }
+    }
+
+    /// ostt's message when it rejects `value` for the model; nil when it accepts it or cannot be asked,
+    /// so a failed check never blocks a value a take would accept.
+    func paramRejection(_ name: String, _ value: ParamValue, model id: OsttModelID) async -> String? {
+        (try? await paramValidator?.rejection(name, value, model: id)) ?? nil
+    }
+
+    func params(for provider: String) -> [String: ParamValue] {
+        paramValues[provider] ?? preferences.providerParams(provider)
+    }
+
+    /// nil unsets the param, so the provider's own default applies.
+    func setParam(_ name: String, to value: ParamValue?, provider: String) {
+        var values = params(for: provider)
+        values[name] = value
+        preferences.setProviderParams(values, for: provider)
+        paramValues[provider] = values
+    }
+
+    func resetParams(provider: String) {
+        preferences.resetProviderParams(provider)
+        paramValues[provider] = preferences.providerParams(provider)
     }
 
     // MARK: Offline models

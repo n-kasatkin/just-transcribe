@@ -2,6 +2,7 @@ import JustTranscribeKit
 import SwiftUI
 
 /// Provider, then its API key, then its model: ostt accepts a cloud model only once the key is saved.
+/// The provider's options follow, for its selected model or else its first.
 struct TranscriptionSettingsView: View {
     @Bindable var model: SettingsModel
 
@@ -43,6 +44,11 @@ struct TranscriptionSettingsView: View {
                 if model.maskedKey == nil {
                     Text("Save a key to choose a model.")
                 }
+            }
+
+            if let models = model.cloudModels.value, let shown = models.first(where: \.active) ?? models.first {
+                ProviderOptionsSection(model: model, id: shown.id, modelName: shown.name)
+                    .id(shown.id)
             }
 
             if model.currentModelMissingKey, let current = model.currentModel {

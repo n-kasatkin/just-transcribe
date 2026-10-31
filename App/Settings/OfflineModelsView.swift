@@ -1,7 +1,8 @@
 import JustTranscribeKit
 import SwiftUI
 
-/// Whisper and Parakeet models from ostt's registry: download with progress, remove, use.
+/// Whisper and Parakeet models from ostt's registry: download with progress, remove, use; options for
+/// the one in use.
 struct OfflineModelsView: View {
     let model: SettingsModel
 
@@ -9,6 +10,11 @@ struct OfflineModelsView: View {
         Form {
             if let error = model.offlineError {
                 Label(error, systemImage: "xmark.octagon.fill").foregroundStyle(.red)
+            }
+            if let current = model.currentModel, OsttProvider.withID(current.provider)?.isLocal == true {
+                let name = model.localModels[current.provider]?.value?.first { $0.id == current }?.name
+                ProviderOptionsSection(model: model, id: current, modelName: name ?? current.model)
+                    .id(current)
             }
             ForEach(OsttProvider.local) { provider in
                 Section(provider.name) {

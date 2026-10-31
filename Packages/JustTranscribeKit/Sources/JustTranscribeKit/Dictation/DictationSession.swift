@@ -20,7 +20,8 @@ public final class DictationSession {
         public var latestRecording: @Sendable () -> URL?
         /// Runs off the main actor.
         public var prepareRetry: @Sendable (URL, ActiveModel) throws -> (file: URL, duration: Duration)
-        public var transcribe: @Sendable (URL, Duration) async throws -> String
+        /// Transcribes with the model the take was recorded for.
+        public var transcribe: @Sendable (URL, Duration, ActiveModel) async throws -> String
         public var paste: @MainActor (String) async -> Paster.Outcome
         public var copy: @MainActor (String) -> Bool
         /// Keeps a successful transcript in the history.
@@ -36,7 +37,7 @@ public final class DictationSession {
             save: @escaping @Sendable ([Float], AudioContainer) throws -> TakeResult,
             latestRecording: @escaping @Sendable () -> URL?,
             prepareRetry: @escaping @Sendable (URL, ActiveModel) throws -> (file: URL, duration: Duration),
-            transcribe: @escaping @Sendable (URL, Duration) async throws -> String,
+            transcribe: @escaping @Sendable (URL, Duration, ActiveModel) async throws -> String,
             paste: @escaping @MainActor (String) async -> Paster.Outcome,
             copy: @escaping @MainActor (String) -> Bool,
             recordTranscript: @escaping @MainActor (String) -> Void
@@ -56,12 +57,13 @@ public final class DictationSession {
             self.recordTranscript = recordTranscript
         }
 
-        /// The app's wiring: the real microphone, ostt through `models` and `transcriber`, the recordings
-        /// folder and retention from `preferences` as they are at each take, and the system pasteboard.
+        /// The app's wiring: the real microphone, ostt through `models` and `transcriber` with the provider
+        /// params from `params`, the recordings folder and retention from `preferences` as they are at
+        /// each take, and the system pasteboard.
         @MainActor
         public static func live(
-            recorder: Recorder, models: ActiveModelCache, transcriber: Transcriber, preferences: AppPreferences,
-            history: HistoryStore, paster: Paster
+            recorder: Recorder, models: ActiveModelCache, transcriber: Transcriber, params: ModelParamArguments,
+            preferences: AppPreferences, history: HistoryStore, paster: Paster
         ) -> Dependencies {
             Dependencies(
                 microphoneAccess: { MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio)) },
@@ -73,11 +75,22 @@ public final class DictationSession {
                 save: { try Take.save($0, as: $1, in: preferences.recordingStore, retention: preferences.recordingRetention) },
                 latestRecording: { preferences.recordingStore.latestRecording() },
                 prepareRetry: { try RetryTake.prepare($0, for: $1) },
-                transcribe: { try await transcriber.transcribe(file: $0, audioDuration: $1) },
+                transcribe: transcribe(transcriber: transcriber, params: params),
                 paste: { await paster.paste($0) },
                 copy: { Paster.writeGeneralPasteboard($0) },
                 recordTranscript: { history.add($0) }
             )
+        }
+
+        /// Transcribes on the take's model with its provider's params.
+        public static func transcribe(
+            transcriber: Transcriber, params: ModelParamArguments
+        ) -> @Sendable (URL, Duration, ActiveModel) async throws -> String {
+            { file, duration, model in
+                try await transcriber.transcribe(
+                    file: file, model: model, params: try await params.arguments(for: model), audioDuration: duration
+                )
+            }
         }
     }
 
@@ -95,7 +108,8 @@ public final class DictationSession {
     @ObservationIgnored public var onNoModel: (() -> Void)?
 
     @ObservationIgnored private let dependencies: Dependencies
-    @ObservationIgnored private var container = AudioContainer.m4a
+    /// The model the current recording is for; its container and params follow it.
+    @ObservationIgnored private var model: ActiveModel?
     /// Starting, saving or transcribing; cancel stops it.
     @ObservationIgnored private(set) var work: Task<Void, Never>?
     /// Bumped whenever a dictation ends. Work that outlives its cancel (a pending microphone prompt,
@@ -144,7 +158,7 @@ public final class DictationSession {
                 guard let model = try await dependencies.currentModel() else { throw DictationError.noModel }
                 let (ready, duration) = try await Task.detached { try prepare(file, model) }.value
                 guard id == generation else { return }
-                try await transcribeAndPaste(ready, duration: duration, id: id)
+                try await transcribeAndPaste(ready, duration: duration, model: model, id: id)
             } catch {
                 if id == generation { fail(error) }
             }
@@ -181,7 +195,7 @@ public final class DictationSession {
                 try await requireMicrophone()
                 guard let model = try await dependencies.currentModel() else { throw DictationError.noModel }
                 guard id == generation else { return }
-                container = AudioContainer(model.audioFormat)
+                self.model = model
                 try dependencies.startRecording()
                 work = nil
                 setPhase(.recording)
@@ -210,7 +224,9 @@ public final class DictationSession {
 
     private func stop() {
         let samples = dependencies.stopRecording()
-        let container = container
+        // A recording always has a model; the guard only unwraps it.
+        guard let model else { return fail(DictationError.noModel) }
+        let container = AudioContainer(model.audioFormat)
         let save = dependencies.save
         setPhase(.transcribing)
         let id = generation
@@ -222,15 +238,15 @@ public final class DictationSession {
                     finish(.nothingHeard)
                     return
                 }
-                try await transcribeAndPaste(file, duration: .seconds(seconds), id: id)
+                try await transcribeAndPaste(file, duration: .seconds(seconds), model: model, id: id)
             } catch {
                 if id == generation { fail(error) }
             }
         }
     }
 
-    private func transcribeAndPaste(_ file: URL, duration: Duration, id: Int) async throws {
-        let text = try await dependencies.transcribe(file, duration)
+    private func transcribeAndPaste(_ file: URL, duration: Duration, model: ActiveModel, id: Int) async throws {
+        let text = try await dependencies.transcribe(file, duration, model)
         guard id == generation else { return }
         lastTranscript = text
         dependencies.recordTranscript(text)

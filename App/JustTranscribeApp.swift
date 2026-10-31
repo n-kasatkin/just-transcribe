@@ -21,7 +21,7 @@ struct JustTranscribeApp: App {
             // Cmd-dragging the icon out skips the toggle's confirmation; Settings shows the way back instead.
             guard !shown, !hideConfirmed else { return }
             hideConfirmed = true
-            services.settingsWindow.show()
+            services.settingsWindow.show(.general)
         }
     }
 }
@@ -93,13 +93,16 @@ final class AppServices {
         let process = ProcessOsttRunner(executableURL: Bundle.main.bundleURL.appending(path: "Contents/Helpers/ostt"))
         // One queue for transcription and config writes: ostt rewrites ostt.toml non-atomically.
         let serial = SerialOsttRunner(process)
-        let settings = SettingsModel(runner: process, configRunner: serial, paths: paths)
+        let settings = SettingsModel(
+            runner: process, configRunner: serial,
+            paramValidator: OsttParamValidator(executableURL: process.executableURL), preferences: preferences
+        )
         let loginItem = LoginItem()
         let settingsWindow = SettingsWindowController(
             settings: settings, loginItem: loginItem, preferences: preferences, history: history
         )
         let dictation = DictationController(runner: serial, preferences: preferences, history: history) {
-            settingsWindow.show()
+            settingsWindow.show(.transcription)
         }
         settings.onModelChange = { dictation.modelChanged() }
         self.settings = settings

@@ -1,0 +1,2204 @@
+[
+  {
+    "provider": "openai",
+    "model": "gpt-transcribe",
+    "params": [
+      {
+        "name": "languages",
+        "type": "string list"
+      },
+      {
+        "name": "keywords",
+        "type": "string list"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-4o-transcribe",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "include",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-4o-mini-transcribe",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "include",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "openai",
+    "model": "gpt-4o-transcribe-diarize",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "chunking_strategy",
+        "type": "string"
+      },
+      {
+        "name": "known_speaker_names",
+        "type": "string list"
+      },
+      {
+        "name": "known_speaker_references",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "openai",
+    "model": "whisper-1",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "deepgram",
+    "model": "nova-3",
+    "params": [
+      {
+        "name": "custom_intent",
+        "type": "string list"
+      },
+      {
+        "name": "custom_intent_mode",
+        "type": "string"
+      },
+      {
+        "name": "custom_topic",
+        "type": "string list"
+      },
+      {
+        "name": "custom_topic_mode",
+        "type": "string"
+      },
+      {
+        "name": "detect_entities",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_language",
+        "type": "boolean or string list"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize_model",
+        "type": "string"
+      },
+      {
+        "name": "dictation",
+        "type": "boolean"
+      },
+      {
+        "name": "encoding",
+        "type": "string"
+      },
+      {
+        "name": "extra",
+        "type": "string list"
+      },
+      {
+        "name": "filler_words",
+        "type": "boolean"
+      },
+      {
+        "name": "intents",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterm",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "measurements",
+        "type": "boolean"
+      },
+      {
+        "name": "mip_opt_out",
+        "type": "boolean"
+      },
+      {
+        "name": "multichannel",
+        "type": "boolean"
+      },
+      {
+        "name": "numerals",
+        "type": "boolean"
+      },
+      {
+        "name": "paragraphs",
+        "type": "boolean"
+      },
+      {
+        "name": "profanity_filter",
+        "type": "boolean"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "redact",
+        "type": "string list"
+      },
+      {
+        "name": "replace",
+        "type": "string list"
+      },
+      {
+        "name": "search",
+        "type": "string list"
+      },
+      {
+        "name": "sentiment",
+        "type": "boolean"
+      },
+      {
+        "name": "smart_format",
+        "type": "boolean"
+      },
+      {
+        "name": "summarize",
+        "type": "boolean or string"
+      },
+      {
+        "name": "tag",
+        "type": "string list"
+      },
+      {
+        "name": "topics",
+        "type": "boolean"
+      },
+      {
+        "name": "utterances",
+        "type": "boolean"
+      },
+      {
+        "name": "utt_split",
+        "type": "number"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "deepgram",
+    "model": "nova-3-medical",
+    "params": [
+      {
+        "name": "custom_intent",
+        "type": "string list"
+      },
+      {
+        "name": "custom_intent_mode",
+        "type": "string"
+      },
+      {
+        "name": "custom_topic",
+        "type": "string list"
+      },
+      {
+        "name": "custom_topic_mode",
+        "type": "string"
+      },
+      {
+        "name": "detect_entities",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_language",
+        "type": "boolean or string list"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize_model",
+        "type": "string"
+      },
+      {
+        "name": "dictation",
+        "type": "boolean"
+      },
+      {
+        "name": "encoding",
+        "type": "string"
+      },
+      {
+        "name": "extra",
+        "type": "string list"
+      },
+      {
+        "name": "filler_words",
+        "type": "boolean"
+      },
+      {
+        "name": "intents",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterm",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "measurements",
+        "type": "boolean"
+      },
+      {
+        "name": "mip_opt_out",
+        "type": "boolean"
+      },
+      {
+        "name": "multichannel",
+        "type": "boolean"
+      },
+      {
+        "name": "numerals",
+        "type": "boolean"
+      },
+      {
+        "name": "paragraphs",
+        "type": "boolean"
+      },
+      {
+        "name": "profanity_filter",
+        "type": "boolean"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "redact",
+        "type": "string list"
+      },
+      {
+        "name": "replace",
+        "type": "string list"
+      },
+      {
+        "name": "search",
+        "type": "string list"
+      },
+      {
+        "name": "sentiment",
+        "type": "boolean"
+      },
+      {
+        "name": "smart_format",
+        "type": "boolean"
+      },
+      {
+        "name": "summarize",
+        "type": "boolean or string"
+      },
+      {
+        "name": "tag",
+        "type": "string list"
+      },
+      {
+        "name": "topics",
+        "type": "boolean"
+      },
+      {
+        "name": "utterances",
+        "type": "boolean"
+      },
+      {
+        "name": "utt_split",
+        "type": "number"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "deepgram",
+    "model": "nova-3-pharma",
+    "params": [
+      {
+        "name": "custom_intent",
+        "type": "string list"
+      },
+      {
+        "name": "custom_intent_mode",
+        "type": "string"
+      },
+      {
+        "name": "custom_topic",
+        "type": "string list"
+      },
+      {
+        "name": "custom_topic_mode",
+        "type": "string"
+      },
+      {
+        "name": "detect_entities",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_language",
+        "type": "boolean or string list"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize_model",
+        "type": "string"
+      },
+      {
+        "name": "dictation",
+        "type": "boolean"
+      },
+      {
+        "name": "encoding",
+        "type": "string"
+      },
+      {
+        "name": "extra",
+        "type": "string list"
+      },
+      {
+        "name": "filler_words",
+        "type": "boolean"
+      },
+      {
+        "name": "intents",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterm",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "measurements",
+        "type": "boolean"
+      },
+      {
+        "name": "mip_opt_out",
+        "type": "boolean"
+      },
+      {
+        "name": "multichannel",
+        "type": "boolean"
+      },
+      {
+        "name": "numerals",
+        "type": "boolean"
+      },
+      {
+        "name": "paragraphs",
+        "type": "boolean"
+      },
+      {
+        "name": "profanity_filter",
+        "type": "boolean"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "redact",
+        "type": "string list"
+      },
+      {
+        "name": "replace",
+        "type": "string list"
+      },
+      {
+        "name": "search",
+        "type": "string list"
+      },
+      {
+        "name": "sentiment",
+        "type": "boolean"
+      },
+      {
+        "name": "smart_format",
+        "type": "boolean"
+      },
+      {
+        "name": "summarize",
+        "type": "boolean or string"
+      },
+      {
+        "name": "tag",
+        "type": "string list"
+      },
+      {
+        "name": "topics",
+        "type": "boolean"
+      },
+      {
+        "name": "utterances",
+        "type": "boolean"
+      },
+      {
+        "name": "utt_split",
+        "type": "number"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "deepgram",
+    "model": "nova-2",
+    "params": [
+      {
+        "name": "custom_intent",
+        "type": "string list"
+      },
+      {
+        "name": "custom_intent_mode",
+        "type": "string"
+      },
+      {
+        "name": "custom_topic",
+        "type": "string list"
+      },
+      {
+        "name": "custom_topic_mode",
+        "type": "string"
+      },
+      {
+        "name": "detect_entities",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_language",
+        "type": "boolean or string list"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize_model",
+        "type": "string"
+      },
+      {
+        "name": "dictation",
+        "type": "boolean"
+      },
+      {
+        "name": "encoding",
+        "type": "string"
+      },
+      {
+        "name": "extra",
+        "type": "string list"
+      },
+      {
+        "name": "filler_words",
+        "type": "boolean"
+      },
+      {
+        "name": "intents",
+        "type": "boolean"
+      },
+      {
+        "name": "keywords",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "measurements",
+        "type": "boolean"
+      },
+      {
+        "name": "mip_opt_out",
+        "type": "boolean"
+      },
+      {
+        "name": "multichannel",
+        "type": "boolean"
+      },
+      {
+        "name": "numerals",
+        "type": "boolean"
+      },
+      {
+        "name": "paragraphs",
+        "type": "boolean"
+      },
+      {
+        "name": "profanity_filter",
+        "type": "boolean"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "redact",
+        "type": "string list"
+      },
+      {
+        "name": "replace",
+        "type": "string list"
+      },
+      {
+        "name": "search",
+        "type": "string list"
+      },
+      {
+        "name": "sentiment",
+        "type": "boolean"
+      },
+      {
+        "name": "smart_format",
+        "type": "boolean"
+      },
+      {
+        "name": "summarize",
+        "type": "boolean or string"
+      },
+      {
+        "name": "tag",
+        "type": "string list"
+      },
+      {
+        "name": "topics",
+        "type": "boolean"
+      },
+      {
+        "name": "utterances",
+        "type": "boolean"
+      },
+      {
+        "name": "utt_split",
+        "type": "number"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "groq",
+    "model": "whisper-large-v3",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "groq",
+    "model": "whisper-large-v3-turbo",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "openai/whisper-large-v3",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "openai/whisper-large-v3-turbo",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "Qwen/Qwen3-ASR-0.6B",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "Qwen/Qwen3-ASR-1.7B",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "nvidia/Nemotron-3.5-ASR-Streaming-Multilingual-0.6b",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "mistralai/Voxtral-Mini-3B-2507",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "deepinfra",
+    "model": "mistralai/Voxtral-Small-24B-2507",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "initial_prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "task",
+        "type": "string"
+      },
+      {
+        "name": "chunk_level",
+        "type": "string"
+      },
+      {
+        "name": "chunk_length_s",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "assemblyai",
+    "model": "universal-3-5-pro",
+    "params": [
+      {
+        "name": "boost_param",
+        "type": "string"
+      },
+      {
+        "name": "disfluencies",
+        "type": "boolean"
+      },
+      {
+        "name": "filter_profanity",
+        "type": "boolean"
+      },
+      {
+        "name": "format_text",
+        "type": "boolean"
+      },
+      {
+        "name": "language_detection",
+        "type": "boolean"
+      },
+      {
+        "name": "language_code",
+        "type": "string"
+      },
+      {
+        "name": "keyterms_prompt",
+        "type": "string list"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "speaker_labels",
+        "type": "boolean"
+      },
+      {
+        "name": "speakers_expected",
+        "type": "integer"
+      },
+      {
+        "name": "speech_threshold",
+        "type": "number"
+      },
+      {
+        "name": "word_boost",
+        "type": "string list"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "provider": "assemblyai",
+    "model": "universal-2",
+    "params": [
+      {
+        "name": "boost_param",
+        "type": "string"
+      },
+      {
+        "name": "disfluencies",
+        "type": "boolean"
+      },
+      {
+        "name": "filter_profanity",
+        "type": "boolean"
+      },
+      {
+        "name": "format_text",
+        "type": "boolean"
+      },
+      {
+        "name": "language_detection",
+        "type": "boolean"
+      },
+      {
+        "name": "language_code",
+        "type": "string"
+      },
+      {
+        "name": "keyterms_prompt",
+        "type": "string list"
+      },
+      {
+        "name": "punctuate",
+        "type": "boolean"
+      },
+      {
+        "name": "speaker_labels",
+        "type": "boolean"
+      },
+      {
+        "name": "speakers_expected",
+        "type": "integer"
+      },
+      {
+        "name": "speech_threshold",
+        "type": "number"
+      },
+      {
+        "name": "word_boost",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "berget",
+    "model": "klang/pianissimo",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "chunk_seconds",
+        "type": "number"
+      }
+    ]
+  },
+  {
+    "provider": "berget",
+    "model": "KBLab/kb-whisper-large",
+    "params": [
+      {
+        "name": "hotwords",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      },
+      {
+        "name": "align",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "speaker_embeddings",
+        "type": "boolean"
+      },
+      {
+        "name": "chunk_size",
+        "type": "integer"
+      },
+      {
+        "name": "batch_size",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "berget",
+    "model": "NbAiLab/nb-whisper-large",
+    "params": [
+      {
+        "name": "hotwords",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      },
+      {
+        "name": "align",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "speaker_embeddings",
+        "type": "boolean"
+      },
+      {
+        "name": "chunk_size",
+        "type": "integer"
+      },
+      {
+        "name": "batch_size",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "berget",
+    "model": "openai/whisper-large-v3",
+    "params": [
+      {
+        "name": "hotwords",
+        "type": "string list"
+      },
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "response_format",
+        "type": "string"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      },
+      {
+        "name": "align",
+        "type": "boolean"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "speaker_embeddings",
+        "type": "boolean"
+      },
+      {
+        "name": "chunk_size",
+        "type": "integer"
+      },
+      {
+        "name": "batch_size",
+        "type": "integer"
+      }
+    ]
+  },
+  {
+    "provider": "elevenlabs",
+    "model": "scribe_v2",
+    "params": [
+      {
+        "name": "language_code",
+        "type": "string"
+      },
+      {
+        "name": "tag_audio_events",
+        "type": "boolean"
+      },
+      {
+        "name": "timestamps_granularity",
+        "type": "string"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_speaker_roles",
+        "type": "boolean"
+      },
+      {
+        "name": "num_speakers",
+        "type": "integer"
+      },
+      {
+        "name": "diarization_threshold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "file_format",
+        "type": "string"
+      },
+      {
+        "name": "seed",
+        "type": "integer"
+      },
+      {
+        "name": "use_multi_channel",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterms",
+        "type": "string list"
+      },
+      {
+        "name": "no_verbatim",
+        "type": "boolean"
+      },
+      {
+        "name": "entity_detection",
+        "type": "string or string list"
+      },
+      {
+        "name": "entity_redaction",
+        "type": "string or string list"
+      },
+      {
+        "name": "entity_redaction_mode",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "elevenlabs",
+    "model": "scribe_v2_medical",
+    "params": [
+      {
+        "name": "language_code",
+        "type": "string"
+      },
+      {
+        "name": "tag_audio_events",
+        "type": "boolean"
+      },
+      {
+        "name": "timestamps_granularity",
+        "type": "string"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "detect_speaker_roles",
+        "type": "boolean"
+      },
+      {
+        "name": "num_speakers",
+        "type": "integer"
+      },
+      {
+        "name": "diarization_threshold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "file_format",
+        "type": "string"
+      },
+      {
+        "name": "seed",
+        "type": "integer"
+      },
+      {
+        "name": "use_multi_channel",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterms",
+        "type": "string list"
+      },
+      {
+        "name": "no_verbatim",
+        "type": "boolean"
+      },
+      {
+        "name": "entity_detection",
+        "type": "string or string list"
+      },
+      {
+        "name": "entity_redaction",
+        "type": "string or string list"
+      },
+      {
+        "name": "entity_redaction_mode",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "elevenlabs",
+    "model": "scribe_v1",
+    "params": [
+      {
+        "name": "language_code",
+        "type": "string"
+      },
+      {
+        "name": "tag_audio_events",
+        "type": "boolean"
+      },
+      {
+        "name": "timestamps_granularity",
+        "type": "string"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "num_speakers",
+        "type": "integer"
+      },
+      {
+        "name": "diarization_threshold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "file_format",
+        "type": "string"
+      },
+      {
+        "name": "seed",
+        "type": "integer"
+      },
+      {
+        "name": "use_multi_channel",
+        "type": "boolean"
+      },
+      {
+        "name": "keyterms",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "mistral",
+    "model": "voxtral-mini-latest",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "context_bias",
+        "type": "string list"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "mistral",
+    "model": "voxtral-mini-2602",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "diarize",
+        "type": "boolean"
+      },
+      {
+        "name": "context_bias",
+        "type": "string list"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "timestamp_granularities",
+        "type": "string list"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "tiny",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "base",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "small",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "medium",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "large-v3",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "turbo",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "tiny.en",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "base.en",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "small.en",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "medium.en",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "small-q5_1",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "medium-q5_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "large-v3-q5_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "turbo-q5_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "turbo-q8_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "distil-large-v3.5",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-tiny",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-base",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-small",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-medium",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-large",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "kb-whisper-large-q5_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-tiny",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-base",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-small",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-medium",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-large",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "whisper",
+    "model": "nb-whisper-large-q5_0",
+    "params": [
+      {
+        "name": "language",
+        "type": "string"
+      },
+      {
+        "name": "no_context",
+        "type": "boolean"
+      },
+      {
+        "name": "no_speech_thold",
+        "type": "number"
+      },
+      {
+        "name": "temperature",
+        "type": "number"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "provider": "parakeet",
+    "model": "parakeet-ultra",
+    "params": []
+  },
+  {
+    "provider": "parakeet",
+    "model": "parakeet-tdt-0.6b-v3",
+    "params": []
+  },
+  {
+    "provider": "parakeet",
+    "model": "parakeet-tdt-0.6b-v2",
+    "params": []
+  },
+  {
+    "provider": "parakeet",
+    "model": "parakeet-tdt_ctc-110m",
+    "params": []
+  }
+]

@@ -64,22 +64,25 @@ To add a key:
 4. Pick a model: **Scribe v2 (general purpose)** for ElevenLabs, **Nova 3 (general purpose)** for Deepgram.
 5. Press your hotkey and dictate a sentence to check.
 
-ostt stores keys in `~/.local/share/ostt/credentials`, readable only by your user. **Remove** on the same tab deletes a key.
+ostt stores keys in `~/.local/share/ostt/credentials`, readable only by your user. **Remove** in the same section deletes a key.
+
+**Provider options**, below the model, lists the request options the selected model accepts, such as language, smart formatting or filler words; the rest are under **More options**. The app sends them with each transcription (ostt's `--param`) and leaves your `ostt.toml` alone. Each value is checked with ostt as you type, so one it would reject, such as an out-of-range number, is never sent. Options for an offline model in use are in **Settings → Offline models**, under **Model options**.
 
 ## Offline models
 
 ostt runs Whisper and Parakeet models on your Mac, with no network after the download. Open **Settings → Offline models**, pick a model, download it and press **Use**.
 
-For speech that mixes languages, use **Whisper Large v3 Turbo Q5_0**; the list marks it Recommended. Models are stored in `~/.local/share/ostt/models`. You remove them from the same tab.
+For speech that mixes languages, use **Whisper Large v3 Turbo Q5_0**; the list marks it Recommended. Models are stored in `~/.local/share/ostt/models`. You remove them in the same section.
 
 ## Keywords
 
-Add names, product terms and jargon in **Settings → Keywords**. ostt passes them to your provider, so they come back spelled the way you want. Replacements and other advanced options live in `ostt.toml`; **Open ostt.toml** on the same tab opens it.
+Add names, product terms and jargon in **Settings → Keywords**. ostt passes them to your provider, so they come back spelled the way you want. Replacements and other advanced options live in `ostt.toml`; **Open ostt.toml** in the same section opens it.
 
 ## Privacy
 
 - Your API keys sit in ostt's `credentials` file, mode 0600, in `~/.local/share/ostt`. Not in the Keychain.
 - Your audio goes only to the provider you chose. With an offline model it never leaves your Mac.
+- Deepgram: the app opts you out of Deepgram's Model Improvement Program by default (`mip_opt_out`), so Deepgram doesn't use your audio to train its models. Turn it off in **Provider options**. ostt exposes no such opt-out for the other providers; ElevenLabs' zero-retention mode is for enterprise accounts only.
 - Recordings go to ostt's `~/.local/share/ostt/recordings`, or the folder you choose in **Settings → Storage**. The app deletes them after 3 days by default, also in folders you used before; you can pick 1, 7 or 30 days, or Forever. A folder you choose keeps its permissions; a folder the app creates is readable only by you.
 - The app keeps the newest 500 transcripts in `~/Library/Application Support/just transcribe/history.json`, mode 0600, so you can copy one again. Entries older than 30 days are deleted by default (1, 3 or 7 days, or Forever, in **Settings → Storage**); **Clear History** deletes them all.
 - ostt keeps its own transcript history with no automatic deletion, and 7 days of logs, in `~/.local/share/ostt`.

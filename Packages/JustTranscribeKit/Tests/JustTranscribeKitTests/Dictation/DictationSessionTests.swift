@@ -26,7 +26,7 @@ struct DictationSessionTests {
             save: @escaping @Sendable ([Float], AudioContainer) throws -> TakeResult = { _, _ in
                 .saved(URL(filePath: "/take.wav"), duration: 1)
             },
-            transcribe: @escaping @Sendable (URL, Duration) async throws -> String = { _, _ in "привет" },
+            transcribe: @escaping @Sendable (URL, Duration, ActiveModel) async throws -> String = { _, _, _ in "привет" },
             paste: (@MainActor (String) async -> Paster.Outcome)? = nil,
             maxRecordingDuration: Duration = .seconds(30 * 60)
         ) {
@@ -45,9 +45,9 @@ struct DictationSessionTests {
                 },
                 latestRecording: { latest },
                 prepareRetry: { file, _ in (file, .seconds(1)) },
-                transcribe: { file, duration in
+                transcribe: { file, duration, model in
                     transcribed.append(file)
-                    return try await transcribe(file, duration)
+                    return try await transcribe(file, duration, model)
                 },
                 paste: { text in
                     self.pasted.append(text)
@@ -157,7 +157,7 @@ struct DictationSessionTests {
     }
 
     @Test func escapeWhileTranscribingPastesNothing() async {
-        let harness = Harness(transcribe: { _, _ in
+        let harness = Harness(transcribe: { _, _, _ in
             try await Task.sleep(for: .seconds(30))
             return "late"
         })
@@ -268,8 +268,28 @@ struct DictationSessionTests {
         #expect(harness.session.phase == .idle)
     }
 
+    @Test func takeAndRetrySendTheProviderParams() async {
+        let runner = FixtureRunner()
+        let params = ModelParamArguments(client: OsttSettingsClient(runner: runner)) { _ in ProviderParams.defaults["deepgram"]! }
+        let harness = Harness(
+            model: ActiveModel(providerID: "deepgram", modelID: "nova-3"),
+            latest: URL(filePath: "/ostt-recording-1.m4a"),
+            transcribe: DictationSession.Dependencies.transcribe(transcriber: Transcriber(runner: runner), params: params)
+        )
+        await harness.record()
+        harness.session.toggle()
+        await harness.session.work?.value
+        harness.session.retryLast()
+        await harness.session.work?.value
+        #expect(harness.pasted == ["hello", "hello"])
+        #expect(runner.calls.filter { $0.first == "transcribe" } == [
+            ["transcribe", "/take.wav", "-m", "deepgram/nova-3", "--param", "mip_opt_out=true"],
+            ["transcribe", "/ostt-recording-1.m4a", "-m", "deepgram/nova-3", "--param", "mip_opt_out=true"],
+        ])
+    }
+
     @Test func failedRetryRecordsNothing() async {
-        let harness = Harness(latest: URL(filePath: "/ostt-recording-1.m4a"), transcribe: { _, _ in throw OsttError.timedOut })
+        let harness = Harness(latest: URL(filePath: "/ostt-recording-1.m4a"), transcribe: { _, _, _ in throw OsttError.timedOut })
         harness.session.retryLast()
         await harness.session.work?.value
         #expect(harness.recorded.isEmpty)
@@ -284,7 +304,7 @@ struct DictationSessionTests {
     }
 
     @Test func failedTranscriptionReturnsToIdle() async {
-        let harness = Harness(transcribe: { _, _ in throw OsttError.timedOut })
+        let harness = Harness(transcribe: { _, _, _ in throw OsttError.timedOut })
         await harness.record()
         harness.session.toggle()
         await harness.session.work?.value

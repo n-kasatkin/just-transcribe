@@ -178,6 +178,15 @@ public struct OsttSettingsClient: Sendable {
         _ = try await run(["keyword", "remove", "--", keyword], on: configRunner)
     }
 
+    /// The request params `id` accepts; empty for a model that takes none, which ostt reports as an error.
+    public func modelParams(_ id: OsttModelID) async throws -> [ModelParam] {
+        do {
+            return try OsttOutput.modelParams(try await run(["model", "params", id.description, "--format", "json"]).stdout)
+        } catch OsttError.failed(let result) where result.stderr.contains("No params are supported") {
+            return []
+        }
+    }
+
     /// Provider ids ostt finds a key for (`auth list --format json`).
     public func authorizedProviders() async throws -> [String] {
         try OsttOutput.strings(try await run(["auth", "list", "--format", "json"]).stdout)

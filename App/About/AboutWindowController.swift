@@ -44,7 +44,7 @@ private struct AboutView: View {
                 .frame(width: 96, height: 96)
             VStack(spacing: 4) {
                 Text("just transcribe")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.title.weight(.semibold))
                 Text(Self.appVersion)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)

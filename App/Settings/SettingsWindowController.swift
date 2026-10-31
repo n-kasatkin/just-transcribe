@@ -20,7 +20,10 @@ final class SettingsWindowController {
         self.history = history
     }
 
-    func show() {
+    /// - Parameter section: the section to select; nil keeps the last one.
+    func show(_ section: SettingsSection? = nil) {
+        // The sidebar's @AppStorage follows the defaults change.
+        if let section { UserDefaults.standard.set(section.rawValue, forKey: SettingsSection.storageKey) }
         let window = window ?? makeWindow()
         self.window = window
         // A menu-bar app is not active, so its window would open behind the frontmost app.
@@ -31,18 +34,22 @@ final class SettingsWindowController {
     }
 
     private func makeWindow() -> NSWindow {
-        let view = SettingsView(model: settings) {
-            GeneralSettingsView(loginItem: loginItem)
-                .tabItem { Label("General", systemImage: "gearshape") }
-        } trailingTabs: {
-            HistorySettingsView(history: history)
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-            StorageSettingsView(preferences: preferences) { [weak self] in self?.onRetentionChange?() }
-                .tabItem { Label("Storage", systemImage: "internaldrive") }
-        }
-        let window = NSWindow(contentViewController: NSHostingController(rootView: view))
-        window.title = "just transcribe Settings"
-        window.styleMask.remove(.miniaturizable)
+        let window = NSWindow(
+            contentRect: .zero, styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            backing: .buffered, defer: true
+        )
+        let view = SettingsView(
+            model: settings, loginItem: loginItem, preferences: preferences, history: history,
+            onRetentionChange: { [weak self] in self?.onRetentionChange?() },
+            // As in System Settings, the title bar names the section.
+            onTitleChange: { [weak window] in window?.title = $0 }
+        )
+        let hosting = NSHostingController(rootView: view)
+        // The split view's toolbar goes to the window, so its sidebar toggle can be removed.
+        hosting.sceneBridgingOptions = .toolbars
+        window.contentViewController = hosting
+        window.toolbarStyle = .unified
+        window.setContentSize(NSSize(width: 740, height: 540))
         window.isReleasedWhenClosed = false
         window.center()
         return window

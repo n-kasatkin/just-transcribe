@@ -16,7 +16,8 @@ final class DictationController {
     private var escapeListener: Task<Void, Never>?
     private var menuObserver: (any NSObjectProtocol)?
 
-    /// - Parameter runner: the serial queue shared with Settings' config writes.
+    /// - Parameter runner: the serial queue shared with Settings' config writes. `model params` goes
+    ///   through it too: ostt loads `ostt.toml` for it and would fail on a half-written file.
     init(
         runner: any OsttRunning, preferences: AppPreferences, history: HistoryStore, openSettings: @escaping () -> Void
     ) {
@@ -25,6 +26,7 @@ final class DictationController {
         self.models = models
         session = DictationSession(.live(
             recorder: recorder, models: models, transcriber: Transcriber(runner: runner),
+            params: ModelParamArguments(client: OsttSettingsClient(runner: runner), values: { preferences.providerParams($0) }),
             preferences: preferences, history: history, paster: Paster()
         ))
         recorder.onLevel = { [weak self] in self?.pill.setLevel($0) }
