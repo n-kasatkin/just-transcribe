@@ -46,6 +46,10 @@ final class SettingsModel {
         SettingsState.currentModelMissingKey(currentModel, providersWithKeys: providersWithKeys)
     }
 
+    var engineReadiness: EngineReadiness {
+        EngineReadiness(current: currentModel, providersWithKeys: providersWithKeys)
+    }
+
     // MARK: Transcription
 
     func loadTranscription() async {
@@ -66,16 +70,39 @@ final class SettingsModel {
         Task { await loadCloudModels() }
     }
 
-    func saveKey() {
+    /// - Returns: whether a key was saved.
+    @discardableResult func saveKey() -> Bool {
         let key = keyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !key.isEmpty else { return }
+        guard !key.isEmpty else { return false }
+        defer { refreshKey() }
         do {
             try credentials.setKey(provider: providerID, key: key)
             keyDraft = ""
             transcriptionError = nil
+            return true
+        } catch {
+            transcriptionError = SettingsState.message(for: error)
+            return false
+        }
+    }
+
+    /// Onboarding's one-step setup: saves the key, then selects the provider's recommended model.
+    func saveKeyAndUseDefaultModel() async {
+        let provider = providerID
+        guard saveKey() else { return }
+        do {
+            let models = try await client.listModels(provider: provider)
+            if let id = Onboarding.modelAfterSavingKey(provider: provider, current: currentModel, models: models) {
+                await useCloudModel(id)
+            }
         } catch {
             transcriptionError = SettingsState.message(for: error)
         }
+    }
+
+    /// Re-reads the selected model and the saved keys, for onboarding's engine row.
+    func refreshEngine() async {
+        await refreshCurrentModel()
         refreshKey()
     }
 
@@ -157,14 +184,17 @@ final class SettingsModel {
         localModels[provider]?.value.flatMap { OsttModel.recommended(in: $0) }
     }
 
-    func download(_ id: OsttModelID) {
+    /// - Parameter thenUse: select the model once its download succeeds.
+    func download(_ id: OsttModelID, thenUse: Bool = false) {
         guard downloads.start(id) else { return }
         offlineError = nil
         downloadTasks[id] = Task {
+            var downloaded = false
             do {
                 try await client.downloadModel(id) { progress in
                     Task { @MainActor in self.downloads.update(id, progress) }
                 }
+                downloaded = true
             } catch OsttError.cancelled {
                 // The user stopped it; nothing to report.
             } catch {
@@ -172,7 +202,11 @@ final class SettingsModel {
             }
             downloads.finish(id)
             downloadTasks[id] = nil
-            await loadLocalModels()
+            if downloaded && thenUse {
+                await useLocalModel(id)
+            } else {
+                await loadLocalModels()
+            }
         }
     }
 
