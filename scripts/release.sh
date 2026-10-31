@@ -69,7 +69,8 @@ archive_and_export() { # work dir -> exported app at <work>/export/<APP_NAME>.ap
   local work="$1"
   xcodebuild archive -quiet -project "$ROOT/JustTranscribe.xcodeproj" -scheme JustTranscribe \
     -configuration Release -destination 'generic/platform=macOS' \
-    -derivedDataPath "$ROOT/.derivedData" -archivePath "$work/JustTranscribe.xcarchive"
+    -derivedDataPath "$ROOT/.derivedData" -archivePath "$work/JustTranscribe.xcarchive" \
+    DEVELOPMENT_TEAM="$TEAM_ID" # package targets such as KeyboardShortcuts' resource bundle need it to sign
   cat >"$work/ExportOptions.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -201,7 +202,7 @@ main() {
   while (($#)); do
     case "$1" in
       --publish) publish=1 ;;
-      -h | --help) sed -n '2,6p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+      -h | --help) sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
       -*) die "unknown option $1" ;;
       *) [[ -z "$version" ]] || die "only one VERSION"; version="$1" ;;
     esac
