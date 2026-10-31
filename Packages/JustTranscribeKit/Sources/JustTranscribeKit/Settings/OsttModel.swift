@@ -39,14 +39,18 @@ public struct OsttModel: Sendable, Hashable, Identifiable {
         self.sizeMB = sizeMB
     }
 
-    /// The first quantized Whisper large-v3-turbo in `models`, recommended for mixed-language dictation.
-    /// Matched by name, since registry ids are ostt's to change.
+    /// ostt's registry id (`ostt-models/models-v2.json`) of the model recommended for mixed-language dictation.
+    public static let recommendedID = OsttModelID(provider: "whisper", model: "turbo-q5_0")
+
+    /// `recommendedID` when listed, else the first quantized Whisper Large v3 Turbo, matched on id and
+    /// name with spaces and `_` read as `-`, in case the registry renames it.
     public static func recommended(in models: [OsttModel]) -> OsttModelID? {
-        models.first { model in
+        if models.contains(where: { $0.id == recommendedID }) { return recommendedID }
+        return models.first { model in
             guard model.id.provider == "whisper" else { return false }
             let text = "\(model.id.model) \(model.name)".lowercased()
-            return text.contains("large-v3-turbo")
-                && ["q5", "q8", "q4", "quant"].contains { text.contains($0) }
+                .replacing(" ", with: "-").replacing("_", with: "-")
+            return text.contains("turbo") && !text.contains("distil") && text.contains(/(^|[-(])q\d/)
         }?.id
     }
 }

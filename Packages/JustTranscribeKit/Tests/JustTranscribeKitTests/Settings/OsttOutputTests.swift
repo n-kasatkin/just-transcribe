@@ -28,15 +28,15 @@ struct OsttOutputTests {
           {
             "active": false,
             "installed": false,
-            "model": "large-v3-turbo",
+            "model": "turbo",
             "name": "Whisper Large v3 Turbo",
             "provider": "whisper"
           },
           {
             "active": true,
             "installed": true,
-            "model": "large-v3-turbo-q5_0",
-            "name": "Whisper Large v3 Turbo (Q5_0)",
+            "model": "turbo-q5_0",
+            "name": "Whisper Large v3 Turbo Q5_0",
             "provider": "whisper"
           },
           {
@@ -63,7 +63,7 @@ struct OsttOutputTests {
         let models = try OsttOutput.models(Self.whisperList)
         #expect(models.map(\.installed) == [false, true, false])
         #expect(models.map(\.active) == [false, true, false])
-        #expect(models[1].id.description == "whisper/large-v3-turbo-q5_0")
+        #expect(models[1].id.description == "whisper/turbo-q5_0")
         #expect(try OsttOutput.models("[]") == [])
     }
 
@@ -85,29 +85,48 @@ struct OsttOutputTests {
 
     @Test func picksQuantizedLargeV3TurboAsRecommended() throws {
         let models = try OsttOutput.models(Self.whisperList)
-        #expect(OsttModel.recommended(in: models) == OsttModelID(provider: "whisper", model: "large-v3-turbo-q5_0"))
+        #expect(OsttModel.recommended(in: models) == OsttModelID(provider: "whisper", model: "turbo-q5_0"))
         #expect(OsttModel.recommended(in: Array(models.prefix(1))) == nil)
         let parakeet = OsttModel(id: OsttModelID(provider: "parakeet", model: "large-v3-turbo-q8"), name: "", installed: false, active: false)
         #expect(OsttModel.recommended(in: [parakeet]) == nil)
     }
 
+    /// Ids and names as in ostt's registry, `kristoferlund/ostt-models/models-v2.json`.
+    @Test func recommendsTurboQ5FromTheRealRegistryNames() {
+        func whisper(_ id: String, _ name: String) -> OsttModel {
+            OsttModel(id: OsttModelID(provider: "whisper", model: id), name: name, installed: false, active: false)
+        }
+        let registry = [
+            whisper("large-v3", "Whisper Large v3"), whisper("turbo", "Whisper Large v3 Turbo"),
+            whisper("large-v3-q5_0", "Whisper Large v3 Q5_0"), whisper("turbo-q8_0", "Whisper Large v3 Turbo Q8_0"),
+            whisper("turbo-q5_0", "Whisper Large v3 Turbo Q5_0"),
+            whisper("distil-large-v3.5", "Distil-Whisper Large v3.5 (English)"),
+        ]
+        #expect(OsttModel.recommended(in: registry) == OsttModel.recommendedID)
+        // Renamed in a later registry: fall back to any quantized turbo, by id or by name.
+        #expect(OsttModel.recommended(in: Array(registry.prefix(4)))?.model == "turbo-q8_0")
+        #expect(OsttModel.recommended(in: [whisper("lv3t", "Large v3 Turbo (Q5_0)")])?.model == "lv3t")
+        #expect(OsttModel.recommended(in: Array(registry.prefix(3)) + [registry[5]]) == nil)
+    }
+
     @Test func readsSizesFromRegistryCacheAndCustomModels() throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "jt-models-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: dir) }
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         try Data("""
             [
               {
-                "id": "large-v3-turbo-q5_0",
+                "id": "turbo-q5_0",
                 "provider_id": "whisper",
-                "name": "Whisper Large v3 Turbo (Q5_0)",
+                "name": "Whisper Large v3 Turbo Q5_0",
                 "description": "Quantized turbo",
                 "languages": ["multilingual"],
                 "size_mb": 547,
-                "url": "https://huggingface.co/example/ggml-large-v3-turbo-q5_0.bin",
+                "url": "https://huggingface.co/example/ggml-turbo-q5_0.bin",
                 "recommended_hardware": null,
                 "sha256": "00",
                 "category": "whisper",
-                "group_id": "large-v3-turbo"
+                "group_id": "turbo"
               },
               {
                 "id": "base",
@@ -129,7 +148,7 @@ struct OsttOutputTests {
             """.utf8).write(to: dir.appending(path: "models.json"))
 
         #expect(OsttOutput.localModelSizes(in: dir) == [
-            OsttModelID(provider: "whisper", model: "large-v3-turbo-q5_0"): 547,
+            OsttModelID(provider: "whisper", model: "turbo-q5_0"): 547,
             OsttModelID(provider: "whisper", model: "base"): 142,
             OsttModelID(provider: "parakeet", model: "tdt"): 600,
         ])

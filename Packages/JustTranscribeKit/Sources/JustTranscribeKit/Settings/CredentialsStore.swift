@@ -12,6 +12,9 @@ public struct CredentialsStore: Sendable {
         case multilineKey
         /// The file is not UTF-8 text, so it is left untouched.
         case unreadableFile
+        /// A line names this provider in TOML this store does not parse (a multi-line string, a dotted key).
+        /// Editing around it would leave a duplicate key, and ostt then reads no keys at all.
+        case unrecognizedEntry(String)
     }
 
     public let paths: OsttPaths
@@ -44,7 +47,7 @@ public struct CredentialsStore: Sendable {
         let newLine = Array("\(provider) = \(Self.basicString(key))".utf8)
         var replaced = false
         // Later duplicates are dropped: TOML rejects a repeated key, and ostt then reads no keys at all.
-        var lines = try lines().compactMap { line -> [UInt8]? in
+        var lines = try editableLines(provider: provider).compactMap { line -> [UInt8]? in
             guard Self.entry(line)?.provider == provider else { return line }
             defer { replaced = true }
             return replaced ? nil : newLine
@@ -62,7 +65,7 @@ public struct CredentialsStore: Sendable {
     /// Deletes the provider's line; does nothing when it has none.
     public func removeKey(provider: String) throws {
         try Self.validate(provider: provider)
-        let lines = try lines()
+        let lines = try editableLines(provider: provider)
         let kept = lines.filter { Self.entry($0)?.provider != provider }
         if kept.count != lines.count {
             try write(kept)
@@ -71,6 +74,15 @@ public struct CredentialsStore: Sendable {
 
     private func key(provider: String) throws -> String? {
         try lines().lazy.compactMap(Self.entry).first { $0.provider == provider }?.key
+    }
+
+    /// The file's lines, once no line names `provider` in a form `entry` cannot read.
+    private func editableLines(provider: String) throws -> [[UInt8]] {
+        let lines = try lines()
+        if lines.contains(where: { Self.entry($0) == nil && Self.leadingKey($0) == provider }) {
+            throw Failure.unrecognizedEntry(provider)
+        }
+        return lines
     }
 
     // MARK: File
@@ -172,6 +184,13 @@ public struct CredentialsStore: Sendable {
         scanner.skipSpaces()
         guard scanner.isAtEnd || scanner.peek == "#" else { return nil }
         return (provider, key)
+    }
+
+    /// The first key of a line, also when a dot or an unreadable value follows it.
+    static func leadingKey(_ line: [UInt8]) -> String? {
+        var scanner = LineScanner(String(decoding: line, as: UTF8.self))
+        scanner.skipSpaces()
+        return scanner.key()
     }
 
     private struct LineScanner {

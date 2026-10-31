@@ -19,7 +19,7 @@ struct OfflineModelsView: View {
                         HStack {
                             Text(message).foregroundStyle(.red)
                             Spacer()
-                            Button("Retry") { Task { await model.loadLocalModels(provider: provider.id) } }
+                            Button("Retry") { Task { await model.loadLocalModels() } }
                         }
                     case .loaded(let models):
                         let recommended = model.recommendedModel(provider: provider.id)
@@ -54,7 +54,7 @@ private struct OfflineModelRow: View {
                 }
                 actions
             }
-            if let progress = model.downloads[item.id] {
+            if let progress = model.downloads.progress[item.id] {
                 ProgressView(value: progress?.fraction) {
                     Text(progressText(progress)).font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 }
@@ -63,7 +63,7 @@ private struct OfflineModelRow: View {
     }
 
     @ViewBuilder private var actions: some View {
-        if model.downloads[item.id] != nil {
+        if model.downloads.isDownloading(item.id) {
             Button("Cancel") { model.cancelDownload(item.id) }
         } else if item.installed == true {
             Button("Remove", role: .destructive) { Task { await model.removeLocalModel(item.id) } }

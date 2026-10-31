@@ -2,8 +2,12 @@ import Foundation
 import Testing
 @testable import JustTranscribeKit
 
-struct CredentialsStoreTests {
+final class CredentialsStoreTests {
     let root = FileManager.default.temporaryDirectory.appending(path: "jt-creds-\(UUID().uuidString)", directoryHint: .isDirectory)
+
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+    }
     var paths: OsttPaths {
         OsttPaths(configDirectory: root.appending(path: "config/ostt"), dataDirectory: root.appending(path: "data/ostt"))
     }
@@ -129,5 +133,15 @@ struct CredentialsStoreTests {
         try bytes.write(to: paths.credentialsFile)
         #expect(throws: CredentialsStore.Failure.unreadableFile) { try store.setKey(provider: "openai", key: "sk") }
         #expect(try Data(contentsOf: paths.credentialsFile) == bytes)
+    }
+
+    @Test(arguments: ["openai = \"\"\"sk-multi\"\"\"", "openai.org = \"x\"", "\"openai\" = 42"])
+    func refusesToEditAroundAnEntryItCannotRead(line: String) throws {
+        let original = "groq = \"gsk\"\n\(line)\n"
+        try seed(original)
+        #expect(throws: CredentialsStore.Failure.unrecognizedEntry("openai")) { try store.setKey(provider: "openai", key: "sk") }
+        #expect(throws: CredentialsStore.Failure.unrecognizedEntry("openai")) { try store.removeKey(provider: "openai") }
+        try store.setKey(provider: "mistral", key: "m")
+        #expect(try content() == original + "mistral = \"m\"\n")
     }
 }

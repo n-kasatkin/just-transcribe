@@ -5,7 +5,7 @@ import Testing
 /// Runs the real `vendor/ostt/ostt` in a throwaway home: HOME and every XDG directory point into a
 /// fresh temp dir, so the owner's ostt config, keys and logs are never touched. Only commands that need
 /// no network are used.
-private struct SandboxedOstt: OsttRunning {
+private final class SandboxedOstt: OsttRunning {
     static let helper = URL(filePath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -25,6 +25,10 @@ private struct SandboxedOstt: OsttRunning {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
     }
 
+    deinit {
+        try? FileManager.default.removeItem(at: root)
+    }
+
     func run(_ arguments: [String], timeout: Duration, onStderr: (@Sendable (String) -> Void)?) async throws -> OsttResult {
         let process = Process()
         process.executableURL = Self.helper
@@ -41,10 +45,23 @@ private struct SandboxedOstt: OsttRunning {
         process.standardOutput = stdout
         process.standardError = stderr
         process.standardInput = FileHandle.nullDevice
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            process.terminationHandler = { _ in continuation.resume() }
-            do { try process.run() } catch { continuation.resume(throwing: error) }
+
+        // Kills ostt once `timeout` passes, so a hang ends the call instead of outliving the test.
+        let watchdog = Task {
+            try await Task.sleep(for: timeout)
+            if process.isRunning { process.terminate() }
         }
+        defer { watchdog.cancel() }
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                process.terminationHandler = { _ in continuation.resume() }
+                do { try process.run() } catch { continuation.resume(throwing: error) }
+            }
+        } onCancel: {
+            if process.isRunning { process.terminate() }
+        }
+        if Task.isCancelled { throw OsttError.cancelled }
+        if process.terminationReason == .uncaughtSignal { throw OsttError.timedOut }
         // These commands print a few lines, well under the pipe buffer, so reading after exit is safe.
         let result = OsttResult(
             exitCode: process.terminationStatus,
