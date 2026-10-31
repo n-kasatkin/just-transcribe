@@ -3,27 +3,31 @@ import Foundation
 /// Where a dictation is: the hotkey, Escape and the menu act on this.
 public enum DictationPhase: Sendable, Equatable {
     case idle
+    /// Waiting for the microphone prompt or `ostt model current` before capture begins.
+    case starting
     case recording
     case transcribing
 
     /// Escape is registered only while busy, so it works normally in other apps otherwise.
     public var isBusy: Bool { self != .idle }
 
-    /// The dictation hotkey: start, then stop and transcribe. A press while transcribing is ignored.
+    /// The dictation hotkey: start, then stop and transcribe. A press while starting cancels the start,
+    /// since nothing was recorded yet; a press while transcribing is ignored.
     public var onToggle: DictationCommand {
         switch self {
         case .idle: .start
+        case .starting: .cancel
         case .recording: .stopAndTranscribe
         case .transcribing: .none
         }
     }
 
-    /// Escape discards a recording or kills the running ostt.
+    /// Escape abandons a start, discards a recording or kills the running ostt.
     public var onEscape: DictationCommand {
         switch self {
         case .idle: .none
+        case .starting, .transcribing: .cancel
         case .recording: .discardRecording
-        case .transcribing: .cancelTranscription
         }
     }
 
@@ -41,7 +45,8 @@ public enum DictationCommand: Sendable, Equatable {
     case start
     case stopAndTranscribe
     case discardRecording
-    case cancelTranscription
+    /// Abandons a start or a transcription; ostt is killed if it runs.
+    case cancel
 }
 
 public enum DictationError: Error, Sendable, Equatable {

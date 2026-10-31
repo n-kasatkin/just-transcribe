@@ -24,8 +24,8 @@ public enum LevelMeter {
 public final class Recorder {
     /// Called on the main actor about 30 times a second while recording, with a level in 0...1.
     public var onLevel: ((Double) -> Void)?
-    /// Called on the main actor when the input device changes mid-recording and the system stops
-    /// the engine. Capture has ended: call `stop()` to keep the take so far, or `cancel()`.
+    /// Called on the main actor when the audio hardware changed mid-recording and capture could not
+    /// resume on the new default input. Capture has ended: call `stop()` to keep the take so far, or `cancel()`.
     public var onInterrupted: (() -> Void)?
 
     private var engine: AVAudioEngine?
@@ -63,7 +63,7 @@ public final class Recorder {
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.onInterrupted?() }
+            MainActor.assumeIsolated { self?.resume() }
         }
         meter = Task { [weak self] in
             while !Task.isCancelled {
@@ -71,6 +71,26 @@ public final class Recorder {
                 guard let self, let buffer = self.buffer else { return }
                 self.onLevel?(buffer.level)
             }
+        }
+    }
+
+    /// The engine stopped because the input or output hardware changed, as when a Bluetooth headset
+    /// switches profile right after capture starts. Carries on with the new format in the same take.
+    private func resume() {
+        guard let engine, let buffer else { return }
+        let input = engine.inputNode
+        input.removeTap(onBus: 0)
+        let format = input.outputFormat(forBus: 0)
+        guard format.sampleRate > 0, format.channelCount > 0, buffer.switchInput(to: format) else {
+            onInterrupted?()
+            return
+        }
+        Self.installTap(on: input, format: format, into: buffer)
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            onInterrupted?()
         }
     }
 
@@ -137,6 +157,17 @@ final class RecordingBuffer: @unchecked Sendable {
             state.level = LevelMeter.level(rms: converted.withUnsafeBufferPointer { vDSP.rootMeanSquare($0) })
             state.samples.append(contentsOf: converted)
         }
+    }
+
+    /// Keeps the samples converted so far and converts later buffers from `format`; false when
+    /// `format` cannot be converted.
+    func switchInput(to format: AVAudioFormat) -> Bool {
+        guard let converter = SampleConverter(from: format) else { return false }
+        state.withLockUnchecked { state in
+            state.samples.append(contentsOf: (try? state.converter.finish()) ?? [])
+            state.converter = converter
+        }
+        return true
     }
 
     /// All samples so far, including those the resampler still held.

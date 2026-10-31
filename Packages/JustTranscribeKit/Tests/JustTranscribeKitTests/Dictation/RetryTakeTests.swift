@@ -46,9 +46,21 @@ final class RetryTakeTests {
         #expect(!FileManager.default.fileExists(atPath: directory.appending(path: "ostt-recording-2.wav").path(percentEncoded: false)))
     }
 
+    @Test func unreadableCLITakeIsSentAsIsToACloudModel() throws {
+        // AVAudioFile cannot open this, as with an Ogg take from the ostt CLI.
+        let ogg = directory.appending(path: "ostt-recording-3.ogg")
+        try Data(count: 20_000).write(to: ogg)
+        let (file, duration) = try RetryTake.prepare(ogg, for: cloud)
+        #expect(file == ogg)
+        #expect(duration == .seconds(20))
+    }
+
     @Test func missingFileThrows() {
         #expect(throws: (any Error).self) {
             try RetryTake.prepare(self.directory.appending(path: "missing.wav"), for: self.whisper)
+        }
+        #expect(throws: (any Error).self) {
+            try RetryTake.prepare(self.directory.appending(path: "missing.ogg"), for: self.cloud)
         }
     }
 }

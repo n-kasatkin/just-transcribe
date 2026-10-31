@@ -52,6 +52,19 @@ struct ActiveModelCacheTests {
         #expect(try calls(fake) == 2)
     }
 
+    @Test func invalidateDuringAQueryDropsItsAnswer() async throws {
+        let fake = try FakeOstt(script: "echo x >> \"$(dirname \"$0\")/calls\"; touch \"$(dirname \"$0\")/started\"; sleep 0.5; echo whisper/base")
+        defer { fake.remove() }
+        try Data("[model]\n".utf8).write(to: fake.file("ostt.toml"))
+        let cache = ActiveModelCache(runner: fake.runner, configFile: fake.file("ostt.toml"))
+        async let first = cache.current()
+        try await waitForFile(fake.file("started"))
+        await cache.invalidate()
+        #expect(try await first == ActiveModel(providerID: "whisper", modelID: "base"))
+        _ = try await cache.current()
+        #expect(try calls(fake) == 2)
+    }
+
     @Test func failuresAreNotCached() async throws {
         let fake = try FakeOstt(script: "echo x >> \"$(dirname \"$0\")/calls\"; echo 'Error: broken' >&2; exit 1")
         defer { fake.remove() }

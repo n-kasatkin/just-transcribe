@@ -19,6 +19,8 @@ final class SettingsWindowController {
         // A menu-bar app is not active, so its window would open behind the frontmost app.
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
+        // From the global hotkey macOS may refuse the activation; the window still comes to the front.
+        window.orderFrontRegardless()
     }
 
     private func makeWindow() -> NSWindow {

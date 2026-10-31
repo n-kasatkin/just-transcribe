@@ -9,22 +9,22 @@ struct AppMenu: View {
     let settingsWindow: SettingsWindowController
 
     var body: some View {
-        switch dictation.phase {
+        let session = dictation.session
+        switch session.phase {
         case .idle:
-            Button("Start Dictation") { dictation.toggle() }
+            Button("Start Dictation") { session.toggle() }
                 .globalKeyboardShortcut(.toggleDictation)
         case .recording:
-            Button("Stop Dictation") { dictation.toggle() }
+            Button("Stop Dictation") { session.toggle() }
                 .globalKeyboardShortcut(.toggleDictation)
-        case .transcribing:
-            Button("Transcribing…") {}
-                .disabled(true)
+        case .starting, .transcribing:
+            Button("Cancel Dictation") { session.cancel() }
         }
-        Button("Retry Last") { dictation.retryLast() }
-            .disabled(!dictation.phase.canRetry)
-        Button("Copy Last") { dictation.copyLast() }
-            .disabled(dictation.lastTranscript == nil)
-        if dictation.microphoneDenied {
+        Button("Retry Last") { session.retryLast() }
+            .disabled(!session.phase.canRetry)
+        Button("Copy Last") { session.copyLast() }
+            .disabled(session.lastTranscript == nil)
+        if session.microphoneDenied {
             Button("Allow Microphone Access…") { NSWorkspace.shared.open(PrivacyPane.microphone.url) }
         }
         Divider()

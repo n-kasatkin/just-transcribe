@@ -5,27 +5,32 @@ import Testing
 struct DictationFlowTests {
     @Test func hotkeyStartsThenStopsAndIgnoresPressesWhileTranscribing() {
         #expect(DictationPhase.idle.onToggle == .start)
+        #expect(DictationPhase.starting.onToggle == .cancel)
         #expect(DictationPhase.recording.onToggle == .stopAndTranscribe)
         #expect(DictationPhase.transcribing.onToggle == DictationCommand.none)
     }
 
     @Test func escapeDiscardsOrCancelsAndIsInertWhenIdle() {
         #expect(DictationPhase.idle.onEscape == DictationCommand.none)
+        #expect(DictationPhase.starting.onEscape == .cancel)
         #expect(DictationPhase.recording.onEscape == .discardRecording)
-        #expect(DictationPhase.transcribing.onEscape == .cancelTranscription)
+        #expect(DictationPhase.transcribing.onEscape == .cancel)
     }
 
     @Test func interruptionKeepsTheTakeOnlyWhileRecording() {
         #expect(DictationPhase.recording.onInterrupted == .stopAndTranscribe)
         #expect(DictationPhase.idle.onInterrupted == DictationCommand.none)
+        #expect(DictationPhase.starting.onInterrupted == DictationCommand.none)
         #expect(DictationPhase.transcribing.onInterrupted == DictationCommand.none)
     }
 
     @Test func escapeIsRegisteredOnlyWhileBusyAndRetryOnlyWhenIdle() {
         #expect(!DictationPhase.idle.isBusy)
+        #expect(DictationPhase.starting.isBusy)
         #expect(DictationPhase.recording.isBusy)
         #expect(DictationPhase.transcribing.isBusy)
         #expect(DictationPhase.idle.canRetry)
+        #expect(!DictationPhase.starting.canRetry)
         #expect(!DictationPhase.recording.canRetry)
         #expect(!DictationPhase.transcribing.canRetry)
     }

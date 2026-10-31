@@ -5,7 +5,7 @@ import KeyboardShortcuts
 import SwiftUI
 
 /// Shortcut, start at login and permission status. Checks never prompt; they refresh whenever the
-/// app becomes active, so a change made in System Settings shows on return.
+/// window becomes key or the app becomes active, so a change made in System Settings shows on return.
 struct GeneralSettingsView: View {
     let loginItem: LoginItem
     @State private var microphone = MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio))
@@ -61,6 +61,9 @@ struct GeneralSettingsView: View {
         .formStyle(.grouped)
         .onAppear(perform: refresh)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refresh()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             refresh()
         }
     }

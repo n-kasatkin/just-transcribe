@@ -10,7 +10,7 @@ struct JustTranscribeApp: App {
         MenuBarExtra {
             AppMenu(dictation: services.dictation, settingsWindow: services.settingsWindow)
         } label: {
-            Label("just transcribe", systemImage: services.dictation.phase.menuBarSymbol)
+            Label("just transcribe", systemImage: services.dictation.session.phase.menuBarSymbol)
         }
     }
 }
@@ -39,6 +39,7 @@ private extension DictationPhase {
     var menuBarSymbol: String {
         switch self {
         case .idle: "waveform"
+        case .starting: "mic"
         case .recording: "mic.fill"
         case .transcribing: "ellipsis.circle"
         }
