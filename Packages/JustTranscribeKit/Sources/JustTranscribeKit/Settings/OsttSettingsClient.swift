@@ -63,6 +63,11 @@ public struct OsttSettingsClient: Sendable {
         return models
     }
 
+    /// The helper's version, such as "0.0.34", from `--version`.
+    public func version() async throws -> String {
+        try OsttOutput.version(try await run(["--version"]).stdout)
+    }
+
     /// The selected model, or nil when none is.
     public func currentModel() async throws -> OsttModelID? {
         OsttOutput.currentModel(try await run(["model", "current"]).stdout)

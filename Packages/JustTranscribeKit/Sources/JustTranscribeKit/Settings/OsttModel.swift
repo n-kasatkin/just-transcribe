@@ -82,6 +82,15 @@ enum OsttOutput {
         OsttModelID(stdout.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
+    /// `--version` prints `ostt 0.0.34` (clap's default).
+    static func version(_ stdout: String) throws -> String {
+        let words = stdout.split(whereSeparator: \.isWhitespace)
+        guard words.count == 2, words[0] == "ostt" else {
+            throw OsttSettingsError.unexpectedOutput(String(stdout.prefix(200)))
+        }
+        return String(words[1])
+    }
+
     private static func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
         do {
             return try JSONDecoder().decode(type, from: Data(json.utf8))

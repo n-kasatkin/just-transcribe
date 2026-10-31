@@ -83,6 +83,14 @@ struct OsttOutputTests {
         #expect(OsttOutput.currentModel("No model selected.\n") == nil)
     }
 
+    @Test func parsesVersion() throws {
+        #expect(try OsttOutput.version("ostt 0.0.34\n") == "0.0.34")
+        #expect(throws: OsttSettingsError.unexpectedOutput("error: unexpected argument")) {
+            try OsttOutput.version("error: unexpected argument")
+        }
+        #expect(throws: OsttSettingsError.self) { try OsttOutput.version("") }
+    }
+
     @Test func picksQuantizedLargeV3TurboAsRecommended() throws {
         let models = try OsttOutput.models(Self.whisperList)
         #expect(OsttModel.recommended(in: models) == OsttModelID(provider: "whisper", model: "turbo-q5_0"))

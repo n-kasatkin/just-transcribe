@@ -11,9 +11,9 @@ struct JustTranscribeApp: App {
     var body: some Scene {
         MenuBarExtra {
             AppMenu(dictation: services.dictation, settingsWindow: services.settingsWindow,
-                    onboardingWindow: services.onboardingWindow)
+                    onboardingWindow: services.onboardingWindow, aboutWindow: services.aboutWindow)
         } label: {
-            Label("just transcribe", systemImage: services.dictation.session.phase.menuBarSymbol)
+            Label("just transcribe", image: services.dictation.session.phase.menuBarImage)
         }
     }
 }
@@ -32,6 +32,7 @@ final class AppServices {
     let dictation: DictationController
     let settingsWindow: SettingsWindowController
     let onboardingWindow: OnboardingWindowController
+    let aboutWindow: AboutWindowController
 
     init() {
         let paths = OsttPaths()
@@ -45,18 +46,20 @@ final class AppServices {
         let dictation = DictationController(runner: serial, paths: paths) { settingsWindow.show() }
         settings.onModelChange = { dictation.modelChanged() }
         self.settingsWindow = settingsWindow
+        aboutWindow = AboutWindowController(client: OsttSettingsClient(runner: process))
         self.dictation = dictation
         onboardingWindow = OnboardingWindowController(settings: settings, loginItem: loginItem)
     }
 }
 
 private extension DictationPhase {
-    var menuBarSymbol: String {
+    /// Template images from Assets.xcassets, drawn by scripts/make-icon.swift.
+    var menuBarImage: String {
         switch self {
-        case .idle: "waveform"
-        case .starting: "mic"
-        case .recording: "mic.fill"
-        case .transcribing: "ellipsis.circle"
+        // The microphone is not live yet while starting.
+        case .idle, .starting: "MenuBarIdle"
+        case .recording: "MenuBarRecording"
+        case .transcribing: "MenuBarTranscribing"
         }
     }
 }

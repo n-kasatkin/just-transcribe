@@ -8,6 +8,7 @@ struct AppMenu: View {
     let dictation: DictationController
     let settingsWindow: SettingsWindowController
     let onboardingWindow: OnboardingWindowController
+    let aboutWindow: AboutWindowController
 
     var body: some View {
         let session = dictation.session
@@ -33,10 +34,7 @@ struct AppMenu: View {
         Button("Settings…") { settingsWindow.show() }
             .keyboardShortcut(",")
         Button("Check for Updates…") { NSWorkspace.shared.open(Self.releasesURL) }
-        Button("About just transcribe") {
-            NSApp.activate()
-            NSApp.orderFrontStandardAboutPanel(nil)
-        }
+        Button("About just transcribe") { aboutWindow.show() }
         Divider()
         Button("Quit just transcribe") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
