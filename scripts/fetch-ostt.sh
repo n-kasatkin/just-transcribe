@@ -2,6 +2,8 @@
 # Fetches the official ostt release for Apple Silicon at the pinned version, checks it against
 # the pinned SHA-256 and unpacks it into vendor/ostt/ (binary, LICENSE, README, CHANGELOG).
 # OSTT_ARCHIVE=/path/to/archive.tar.gz verifies and unpacks a local file instead of downloading.
+# vendor/ostt/VERSION records the version, the archive hash and the unpacked binary's hash; a
+# rerun skips only when the binary on disk still has that hash.
 # Bumping ostt: change both pins in one commit and rerun the smoke tests.
 set -euo pipefail
 
@@ -14,7 +16,10 @@ cd "$(dirname "$0")/.."
 DEST=vendor/ostt
 STAMP="${OSTT_VERSION} ${OSTT_SHA256}"
 
-if [[ -z "${OSTT_ARCHIVE:-}" && -x "$DEST/ostt" && "$(cat "$DEST/VERSION" 2>/dev/null)" == "$STAMP" ]]; then
+sha256() { shasum -a 256 "$1" | awk '{print $1}'; }
+
+if [[ -z "${OSTT_ARCHIVE:-}" && -x "$DEST/ostt" && -f "$DEST/VERSION" \
+  && "$(cat "$DEST/VERSION")" == "${STAMP} $(sha256 "$DEST/ostt")" ]]; then
   echo "ostt ${OSTT_VERSION} is already in ${DEST}"
   exit 0
 fi
@@ -29,7 +34,7 @@ else
   curl -fsSL --retry 2 --connect-timeout 20 --max-time 600 -o "$TMP/ostt.tar.gz" "$URL"
 fi
 
-actual="$(shasum -a 256 "$TMP/ostt.tar.gz" | awk '{print $1}')"
+actual="$(sha256 "$TMP/ostt.tar.gz")"
 if [[ "$actual" != "$OSTT_SHA256" ]]; then
   echo "error: SHA-256 mismatch for the ostt ${OSTT_VERSION} archive" >&2
   echo "  expected ${OSTT_SHA256}" >&2
@@ -42,7 +47,7 @@ tar -xzf "$TMP/ostt.tar.gz" -C "$TMP"
 for f in ostt LICENSE; do
   [[ -f "$TMP/$ASSET/$f" ]] || { echo "error: $f is missing from the archive" >&2; exit 1; }
 done
-echo "$STAMP" > "$TMP/$ASSET/VERSION"
+echo "${STAMP} $(sha256 "$TMP/$ASSET/ostt")" > "$TMP/$ASSET/VERSION"
 
 mkdir -p vendor
 rm -rf "$DEST"

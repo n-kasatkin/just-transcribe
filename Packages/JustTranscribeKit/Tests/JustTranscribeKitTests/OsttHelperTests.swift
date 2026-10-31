@@ -53,8 +53,8 @@ struct OsttHelperTests {
     }
 
     @Test func inheritsOtherVariables() {
-        let env = OsttHelper.environment(inheriting: ["HOME": "/Users/someone", "XDG_CONFIG_HOME": "/tmp/cfg"])
-        #expect(env["HOME"] == "/Users/someone")
+        let env = OsttHelper.environment(inheriting: ["HOME": "/home/someone", "XDG_CONFIG_HOME": "/tmp/cfg"])
+        #expect(env["HOME"] == "/home/someone")
         #expect(env["XDG_CONFIG_HOME"] == "/tmp/cfg")
     }
 }

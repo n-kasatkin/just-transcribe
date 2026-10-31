@@ -29,7 +29,7 @@ packages:
     path: Packages/JustTranscribeKit
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
-    exactVersion: 1.10.0
+    exactVersion: 3.1.0
 
 targets:
   JustTranscribe:
@@ -77,6 +77,7 @@ targets:
         # DEVELOPMENT_TEAM=3V43DGM2S6 on the xcodebuild command line (the team signs package bundles).
         Release:
           CODE_SIGN_IDENTITY: Developer ID Application
+          OTHER_CODE_SIGN_FLAGS: "--timestamp"
 
 schemes:
   JustTranscribe:
