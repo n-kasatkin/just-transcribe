@@ -156,7 +156,9 @@ make_dmg() { # app, output dmg, [signing identity]
 
 notarize() { # dmg
   local result status id
+  # One retry: the upload's first connection can time out (e.g. while a firewall prompt is open).
   result="$(xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --output-format plist)" \
+    || result="$(xcrun notarytool submit "$1" --keychain-profile "$NOTARY_PROFILE" --wait --output-format plist)" \
     || die "notarytool submit failed"
   status="$(plutil -extract status raw - <<<"$result")"
   id="$(plutil -extract id raw - <<<"$result")"
@@ -232,10 +234,10 @@ main() {
 
   stage "Check signatures"
   check_app "$app" "Developer ID Application"
+  # On macOS 26 syspolicy_check rejects every not-yet-notarized Developer ID app with a generic
+  # "Gatekeeper rejected this file", so it only warns; the notary service and check_gatekeeper decide.
   if command -v syspolicy_check >/dev/null; then
-    syspolicy_check notary-submission "$app"
-  else
-    echo "  syspolicy_check is not on this macOS; the notary service checks the app instead"
+    syspolicy_check notary-submission "$app" || echo "  warning: syspolicy_check failed; notarization decides"
   fi
 
   stage "DMG"
