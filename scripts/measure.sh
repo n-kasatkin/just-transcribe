@@ -37,7 +37,7 @@ build() {
   mac_id="$(system_profiler SPHardwareDataType 2>/dev/null | awk '/Provisioning UDID/ {print $3}')"
   [[ -n "$mac_id" ]] || die "cannot read this Mac's Provisioning UDID from system_profiler"
   xcodebuild build -quiet -project "$ROOT/JustTranscribe.xcodeproj" -scheme JustTranscribe \
-    -configuration Release -destination "platform=macOS,id=$mac_id" -derivedDataPath "$ROOT/.derivedData" \
+    -configuration Release -destination "platform=macOS,id=$mac_id" -derivedDataPath "$ROOT/.derivedData" -onlyUsePackageVersionsFromResolvedFile \
     CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM="$TEAM_ID" \
     PRODUCT_BUNDLE_IDENTIFIER="$MEASURE_ID" CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO
   [[ "$(defaults read "$APP/Contents/Info.plist" CFBundleIdentifier)" == "$MEASURE_ID" ]] \
@@ -116,7 +116,7 @@ mib_kb() { awk -v k="$1" 'BEGIN { printf "%.1f", k / 1024 }'; }
 write_doc() {
   local commit macos rss_list
   commit="$(git -C "$ROOT" rev-parse --short HEAD)"
-  macos="$(sw_vers -productVersion) ($(sw_vers -buildVersion))"
+  macos="$(sw_vers -productVersion | cut -d. -f1)"
   rss_list="$(printf '%s KB, ' "${RSS_KB[@]}")"
   cat >"$OUT_DOC" <<EOF
 # Measurements

@@ -61,6 +61,9 @@ Add names, product terms and jargon in **Settings → Keywords**. ostt passes th
 - The model list comes from GitHub when you open Offline models. Models download from Hugging Face.
 - The app itself sends nothing anywhere else. Its source has no networking code. Its only URLs are links it opens in your browser: the releases page (**Check for Updates…**) and the project pages in the About window.
 
+- Each transcript stays on your clipboard after pasting, so a clipboard manager may keep it in its own history.
+- The app is not sandboxed: it runs the bundled ostt with your ostt config and data folders, and it sends ⌘V to paste. It uses the hardened runtime and asks for one entitlement, the microphone.
+
 A firewall such as Little Snitch shows these connections from the bundled `ostt` helper, not from the app.
 
 ## Built on ostt

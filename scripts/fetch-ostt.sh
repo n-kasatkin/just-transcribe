@@ -2,24 +2,23 @@
 # Fetches the official ostt release for Apple Silicon at the pinned version, checks it against
 # the pinned SHA-256 and unpacks it into vendor/ostt/ (binary, LICENSE, README, CHANGELOG).
 # OSTT_ARCHIVE=/path/to/archive.tar.gz verifies and unpacks a local file instead of downloading.
-# vendor/ostt/VERSION records the version, the archive hash and the unpacked binary's hash; a
-# rerun skips only when the binary on disk still has that hash.
-# Bumping ostt: change both pins in one commit and rerun the smoke tests.
+# A rerun skips the download only when vendor/ostt/ostt still matches the pinned binary hash.
+# Bumping ostt: change all three pins in one commit and rerun the smoke tests.
 set -euo pipefail
 
 OSTT_VERSION=0.0.34
 OSTT_SHA256=eb2da619ef1a45d7271599000f3a96ebeedd770e897527913f0c0b803158607c
+# The binary inside that archive, so a swapped vendor/ostt/ostt is never reused or embedded.
+OSTT_BINARY_SHA256=59f6ebdf57243c2f78101a7012a198c680f1ef68103e5a9dfff5944e5813d89f
 ASSET=ostt-aarch64-apple-darwin
 URL="https://github.com/kristoferlund/ostt/releases/download/v${OSTT_VERSION}/${ASSET}.tar.gz"
 
 cd "$(dirname "$0")/.."
 DEST=vendor/ostt
-STAMP="${OSTT_VERSION} ${OSTT_SHA256}"
 
 sha256() { shasum -a 256 "$1" | awk '{print $1}'; }
 
-if [[ -z "${OSTT_ARCHIVE:-}" && -x "$DEST/ostt" && -f "$DEST/VERSION" \
-  && "$(cat "$DEST/VERSION")" == "${STAMP} $(sha256 "$DEST/ostt")" ]]; then
+if [[ -z "${OSTT_ARCHIVE:-}" && -x "$DEST/ostt" && "$(sha256 "$DEST/ostt")" == "$OSTT_BINARY_SHA256" ]]; then
   echo "ostt ${OSTT_VERSION} is already in ${DEST}"
   exit 0
 fi
@@ -47,7 +46,10 @@ tar -xzf "$TMP/ostt.tar.gz" -C "$TMP"
 for f in ostt LICENSE; do
   [[ -f "$TMP/$ASSET/$f" ]] || { echo "error: $f is missing from the archive" >&2; exit 1; }
 done
-echo "${STAMP} $(sha256 "$TMP/$ASSET/ostt")" > "$TMP/$ASSET/VERSION"
+if [[ "$(sha256 "$TMP/$ASSET/ostt")" != "$OSTT_BINARY_SHA256" ]]; then
+  echo "error: the ostt binary in the archive does not match the pinned hash" >&2
+  exit 1
+fi
 
 mkdir -p vendor
 rm -rf "$DEST"

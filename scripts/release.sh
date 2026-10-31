@@ -71,6 +71,7 @@ archive_and_export() { # work dir -> exported app at <work>/export/<APP_NAME>.ap
   xcodebuild archive -quiet -project "$ROOT/JustTranscribe.xcodeproj" -scheme JustTranscribe \
     -configuration Release -destination 'generic/platform=macOS' \
     -derivedDataPath "$ROOT/.derivedData" -archivePath "$work/JustTranscribe.xcarchive" \
+    -onlyUsePackageVersionsFromResolvedFile \
     DEVELOPMENT_TEAM="$TEAM_ID" # package targets such as KeyboardShortcuts' resource bundle need it to sign
   cat >"$work/ExportOptions.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
