@@ -38,6 +38,11 @@ targets:
     sources:
       - path: App
         excludes: ["*.entitlements"]
+      # Contents/Resources/LICENSE and THIRD_PARTY_NOTICES.md (scripts/notices.sh writes it).
+      - path: LICENSE
+        buildPhase: resources
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
     dependencies:
       - package: JustTranscribeKit
       - package: KeyboardShortcuts
