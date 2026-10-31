@@ -132,9 +132,9 @@ The numbers behind "light" in the README, measured by \`scripts/measure.sh\`.
 | What | Raw | Rounded |
 |---|---|---|
 | DMG (\`ls -l\`) | $DMG_BYTES bytes | $(mb "$DMG_BYTES") MB |
-| Installed app (\`du -sk\`) | $APP_KB KB | $(mib_kb "$APP_KB") MB (\`du -sh\`: $APP_DU_H) |
-| ostt helper, \`Contents/Helpers/ostt\` (\`du -sk\`) | $HELPER_KB KB | $(mib_kb "$HELPER_KB") MB, $(awk -v h="$HELPER_KB" -v a="$APP_KB" 'BEGIN { printf "%.0f", 100 * h / a }')% of the app |
-| App executable, \`Contents/MacOS\` (\`du -sk\`) | $APP_BIN_KB KB | $(mib_kb "$APP_BIN_KB") MB |
+| Installed app (\`du -sk\`) | $APP_KB KB | $(mib_kb "$APP_KB") MiB (\`du -sh\`: $APP_DU_H) |
+| ostt helper, \`Contents/Helpers/ostt\` (\`du -sk\`) | $HELPER_KB KB | $(mib_kb "$HELPER_KB") MiB, $(awk -v h="$HELPER_KB" -v a="$APP_KB" 'BEGIN { printf "%.0f", 100 * h / a }')% of the app |
+| App executable, \`Contents/MacOS\` (\`du -sk\`) | $APP_BIN_KB KB | $(mib_kb "$APP_BIN_KB") MiB |
 
 ## Idle
 
