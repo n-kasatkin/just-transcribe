@@ -75,6 +75,10 @@ private final class SandboxedOstt: OsttRunning {
 
 @Suite(.timeLimit(.minutes(1)))
 struct RealOsttIntegrationTests {
+    @Test func reportsTheBundledVersion() async throws {
+        #expect(try await OsttSettingsClient(runner: try SandboxedOstt()).version() == "0.0.34")
+    }
+
     @Test func keywordAddedByClientShowsInOsttKeywordList() async throws {
         let ostt = try SandboxedOstt()
         let client = OsttSettingsClient(runner: ostt)

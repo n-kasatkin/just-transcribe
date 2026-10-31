@@ -76,6 +76,13 @@ struct OsttSettingsClientTests {
         ])
     }
 
+    @Test func readsVersionWithQueryTimeout() async throws {
+        let runner = FakeRunner(stdout: "ostt 0.0.34\n")
+        #expect(try await OsttSettingsClient(runner: runner).version() == "0.0.34")
+        #expect(runner.calls.map(\.arguments) == [["--version"]])
+        #expect(runner.calls.map(\.timeout) == [.seconds(20)])
+    }
+
     @Test func readsCurrentModel() async throws {
         #expect(try await OsttSettingsClient(runner: FakeRunner(stdout: "No model selected.\n")).currentModel() == nil)
         #expect(try await OsttSettingsClient(runner: FakeRunner(stdout: "groq/whisper-large-v3\n")).currentModel()
