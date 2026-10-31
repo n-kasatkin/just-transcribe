@@ -201,7 +201,7 @@ write_notes() { # version, sha256, output
 }
 
 main() {
-  local publish=0 version="" work app dmg sha commit
+  local publish=0 version="" app dmg sha commit
   while (($#)); do
     case "$1" in
       --publish) publish=1 ;;
@@ -217,7 +217,7 @@ main() {
   preflight "$version"
   commit="$(git -C "$ROOT" rev-parse HEAD)"
 
-  work="$(mktemp -d)"
+  work="$(mktemp -d)" # global: the EXIT trap runs after main returns
   trap 'rm -rf "$work"' EXIT
 
   stage "Bootstrap: ostt helper, Xcode project, package pins"
