@@ -41,8 +41,9 @@ private extension DictationPhase {
     /// Template images from Assets.xcassets, drawn by scripts/make-icon.swift.
     var menuBarImage: String {
         switch self {
-        case .idle: "MenuBarIdle"
-        case .starting, .recording: "MenuBarRecording"
+        // The microphone is not live yet while starting.
+        case .idle, .starting: "MenuBarIdle"
+        case .recording: "MenuBarRecording"
         case .transcribing: "MenuBarTranscribing"
         }
     }

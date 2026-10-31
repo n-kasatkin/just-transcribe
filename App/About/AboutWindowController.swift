@@ -35,6 +35,7 @@ private struct AboutView: View {
     let client: OsttSettingsClient
     let showAcknowledgements: () -> Void
     @State private var osttVersion = "ostt …"
+    @State private var versionLoaded = false
 
     var body: some View {
         VStack(spacing: 14) {
@@ -66,9 +67,12 @@ private struct AboutView: View {
         .padding(.horizontal, 32)
         .padding(.vertical, 24)
         .frame(width: 360)
+        // The window is reused, so the task reruns on every reopen; the version cannot change.
         .task {
+            guard !versionLoaded else { return }
             do {
                 osttVersion = "ostt \(try await client.version())"
+                versionLoaded = true
             } catch OsttError.helperMissing {
                 osttVersion = "ostt is missing from the app"
             } catch {

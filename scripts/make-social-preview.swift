@@ -9,7 +9,8 @@ let heights: [CGFloat] = [0.28, 0.5, 0.78, 1.0, 0.78, 0.5, 0.28]
 let pillSize = NSSize(width: 14 + 34 + 14, height: 32)
 
 /// Draws the pill in points with its bottom-left corner at `origin`, scaled by `scale`.
-func drawPill(at origin: NSPoint, scale: CGFloat) {
+/// `outlined` adds a faint rim so the dark pill stays visible on the dark preview background.
+func drawPill(at origin: NSPoint, scale: CGFloat, outlined: Bool = false) {
     let body = NSRect(x: origin.x, y: origin.y, width: pillSize.width * scale, height: pillSize.height * scale)
     let shadow = NSShadow()
     shadow.shadowColor = NSColor(white: 0, alpha: 0.45)
@@ -18,8 +19,16 @@ func drawPill(at origin: NSPoint, scale: CGFloat) {
     NSGraphicsContext.saveGraphicsState()
     shadow.set()
     NSColor(white: 0.1, alpha: 0.85).setFill()
-    NSBezierPath(roundedRect: body, xRadius: body.height / 2, yRadius: body.height / 2).fill()
+    let capsule = NSBezierPath(roundedRect: body, xRadius: body.height / 2, yRadius: body.height / 2)
+    capsule.fill()
     NSGraphicsContext.restoreGraphicsState()
+    if outlined {
+        let rim = NSBezierPath(roundedRect: body.insetBy(dx: scale / 2, dy: scale / 2),
+                               xRadius: (body.height - scale) / 2, yRadius: (body.height - scale) / 2)
+        rim.lineWidth = scale
+        NSColor(white: 1, alpha: 0.14).setStroke()
+        rim.stroke()
+    }
 
     let gap = 3 * scale, barsHeight = 16 * scale
     let width = (34 * scale - gap * CGFloat(heights.count - 1)) / CGFloat(heights.count)
@@ -58,7 +67,7 @@ try render(width: Int(canvas.width), height: Int(canvas.height), to: "docs/socia
         ending: NSColor(srgbRed: 0x0F / 255, green: 0x0F / 255, blue: 0x0F / 255, alpha: 1)
     )!.draw(in: NSRect(origin: .zero, size: canvas), angle: -90)
     let scale: CGFloat = 5
-    drawPill(at: NSPoint(x: (canvas.width - pillSize.width * scale) / 2, y: 362), scale: scale)
+    drawPill(at: NSPoint(x: (canvas.width - pillSize.width * scale) / 2, y: 362), scale: scale, outlined: true)
     drawCentered("just transcribe", font: .systemFont(ofSize: 84, weight: .semibold), color: .white,
                  midY: 262, canvasWidth: canvas.width)
     drawCentered("Press a key. Talk. It's typed.", font: .systemFont(ofSize: 36, weight: .regular),

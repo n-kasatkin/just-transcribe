@@ -72,7 +72,7 @@ targets:
         INFOPLIST_KEY_LSUIElement: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "just transcribe records your voice while you dictate and sends it to the transcription engine you chose."
-        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 actionhook. MIT License."
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 actionhook · MIT License"
       configs:
         # Apple Development needs no provisioning profile here; the .dev id keeps Debug's
         # privacy grants apart from Release's.
