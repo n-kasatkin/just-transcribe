@@ -7,11 +7,13 @@ import Carbon.HIToolbox
 public struct Paster: Sendable {
     public enum Outcome: Sendable, Equatable {
         case pasted
-        /// Accessibility is not granted or Secure Input is on, so nothing was typed.
+        /// Accessibility is not granted, Secure Input is on, or the pasteboard write failed, so nothing
+        /// was typed.
         case copiedOnly
     }
 
-    public var writePasteboard: @MainActor @Sendable (String) -> Void
+    /// Returns false when the text did not land on the pasteboard.
+    public var writePasteboard: @MainActor @Sendable (String) -> Bool
     public var isAccessibilityTrusted: @MainActor @Sendable () -> Bool
     public var isSecureInputEnabled: @MainActor @Sendable () -> Bool
     public var sendPasteKeystroke: @MainActor @Sendable () -> Void
@@ -19,7 +21,7 @@ public struct Paster: Sendable {
     public var keystrokeDelay: Duration
 
     public init(
-        writePasteboard: @escaping @MainActor @Sendable (String) -> Void = Paster.writeGeneralPasteboard,
+        writePasteboard: @escaping @MainActor @Sendable (String) -> Bool = Paster.writeGeneralPasteboard,
         isAccessibilityTrusted: @escaping @MainActor @Sendable () -> Bool = { AXIsProcessTrusted() },
         isSecureInputEnabled: @escaping @MainActor @Sendable () -> Bool = { IsSecureEventInputEnabled() },
         sendPasteKeystroke: @escaping @MainActor @Sendable () -> Void = Paster.postCommandV,
@@ -34,8 +36,8 @@ public struct Paster: Sendable {
 
     @MainActor
     public func paste(_ text: String) async -> Outcome {
-        writePasteboard(text)
-        guard isAccessibilityTrusted(), !isSecureInputEnabled() else { return .copiedOnly }
+        // A failed write would make ⌘V paste whatever was copied before.
+        guard writePasteboard(text), isAccessibilityTrusted(), !isSecureInputEnabled() else { return .copiedOnly }
         try? await Task.sleep(for: keystrokeDelay)
         // Secure Input may have turned on during the delay (focus moved to a password field).
         guard !isSecureInputEnabled() else { return .copiedOnly }
@@ -44,9 +46,9 @@ public struct Paster: Sendable {
     }
 
     @MainActor
-    public static func writeGeneralPasteboard(_ text: String) {
+    public static func writeGeneralPasteboard(_ text: String) -> Bool {
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        return NSPasteboard.general.setString(text, forType: .string)
     }
 
     @MainActor

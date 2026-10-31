@@ -12,8 +12,23 @@ struct FakeOstt {
             .appending(path: "jt-engine-\(UUID().uuidString)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         executable = directory.appending(path: "ostt")
-        try Data("#!/bin/sh\n\(script)\n".utf8).write(to: executable)
+        try Data("#!/bin/sh\n[ \"$1\" = \(Self.warmUpArgument) ] && exit 0\n\(script)\n".utf8).write(to: executable)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path(percentEncoded: false))
+        // macOS scans a new executable on its first exec, which can stall for seconds under load;
+        // doing it here keeps that stall out of the timed runs.
+        let warmUp = Process()
+        warmUp.executableURL = executable
+        warmUp.arguments = [Self.warmUpArgument]
+        warmUp.environment = isolatedEnvironment(in: directory)
+        try warmUp.run()
+        warmUp.waitUntilExit()
+    }
+
+    private static let warmUpArgument = "--jt-warm-up"
+
+    /// Deletes the temp dir; tests call it in a `defer`.
+    func remove() {
+        try? FileManager.default.removeItem(at: directory)
     }
 
     func file(_ name: String) -> URL {

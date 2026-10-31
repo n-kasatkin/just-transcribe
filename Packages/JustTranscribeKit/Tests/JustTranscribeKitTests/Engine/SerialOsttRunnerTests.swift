@@ -19,6 +19,7 @@ struct SerialOsttRunnerTests {
 
     @Test func callsNeverOverlap() async throws {
         let fake = try FakeOstt(script: Self.lockingScript)
+        defer { fake.remove() }
         let serial = SerialOsttRunner(fake.runner)
         try await withThrowingTaskGroup(of: Void.self) { group in
             for index in 0..<5 {
@@ -36,6 +37,7 @@ struct SerialOsttRunnerTests {
 
     @Test func runsInArrivalOrder() async throws {
         let fake = try FakeOstt(script: Self.lockingScript)
+        defer { fake.remove() }
         let serial = SerialOsttRunner(fake.runner)
         var tasks: [Task<OsttResult, any Error>] = []
         for index in 0..<3 {
@@ -53,6 +55,7 @@ struct SerialOsttRunnerTests {
             [ "$1" = first ] && sleep 1
             echo "end $1" >> "$dir/log"
             """)
+        defer { fake.remove() }
         let serial = SerialOsttRunner(fake.runner)
         let first = Task { try await serial.run(["first"], timeout: .seconds(10), onStderr: nil) }
         try await Task.sleep(for: .milliseconds(100))
@@ -74,6 +77,7 @@ struct SerialOsttRunnerTests {
 
     @Test func failureReleasesTheQueue() async throws {
         let fake = try FakeOstt(script: "[ \"$1\" = bad ] && { echo 'Error: boom' >&2; exit 1; }\necho ok")
+        defer { fake.remove() }
         let serial = SerialOsttRunner(fake.runner)
         await #expect(throws: OsttError.self) {
             try await serial.run(["bad"], timeout: .seconds(10), onStderr: nil)

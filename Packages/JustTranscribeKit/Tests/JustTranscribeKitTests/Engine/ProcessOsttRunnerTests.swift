@@ -11,6 +11,7 @@ struct ProcessOsttRunnerTests {
     @Test func cyrillicAndEmojiStdoutComesBackIntact() async throws {
         let text = "Привет, мир! Ёжик 🦔 и 👋🏽 test"
         let fake = try FakeOstt(script: "printf '%s\\n' '\(text)'")
+        defer { fake.remove() }
         let result = try await fake.runner.run([], timeout: .seconds(10), onStderr: nil)
         #expect(result.stdout == text + "\n")
         #expect(result.exitCode == 0)
@@ -18,6 +19,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func passesArgumentsAndEnvironment() async throws {
         let fake = try FakeOstt(script: "printf '%s|' \"$@\"; printf '%s|%s' \"$LC_ALL\" \"$XDG_CONFIG_HOME\"")
+        defer { fake.remove() }
         let result = try await fake.runner.run(["transcribe", "/a b/ c.m4a"], timeout: .seconds(10), onStderr: nil)
         let config = fake.directory.path(percentEncoded: false) + "/config"
         #expect(result.stdout == "transcribe|/a b/ c.m4a|en_US.UTF-8|\(config)")
@@ -25,6 +27,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func nonZeroExitFailsWithLastStderrLine() async throws {
         let fake = try FakeOstt(script: "echo partial; echo 'Transcribing…' >&2; echo 'Error: 401 Unauthorized' >&2; exit 1")
+        defer { fake.remove() }
         let error = await #expect(throws: OsttError.self) {
             try await fake.runner.run([], timeout: .seconds(10), onStderr: nil)
         }
@@ -39,6 +42,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func hangTimesOutAndProcessIsGone() async throws {
         let fake = try FakeOstt(script: Self.announcingPID("sleep 30"))
+        defer { fake.remove() }
         let clock = ContinuousClock()
         let start = clock.now
         await #expect(throws: OsttError.timedOut) {
@@ -50,6 +54,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func processIgnoringSIGTERMIsKilled() async throws {
         let fake = try FakeOstt(script: "trap '' TERM\n" + Self.announcingPID("while :; do sleep 0.1; done"))
+        defer { fake.remove() }
         await #expect(throws: OsttError.timedOut) {
             try await fake.runner.run([], timeout: .seconds(2), onStderr: nil)
         }
@@ -62,6 +67,7 @@ struct ProcessOsttRunnerTests {
             head -c 204800 /dev/zero | tr '\\0' e >&2
             head -c 204800 /dev/zero | tr '\\0' o
             """)
+        defer { fake.remove() }
         let result = try await fake.runner.run([], timeout: .seconds(20), onStderr: nil)
         #expect(result.stdout.utf8.count == 204_800)
         #expect(result.stderr.utf8.count == 204_800)
@@ -70,6 +76,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func cancellingTheTaskKillsTheProcess() async throws {
         let fake = try FakeOstt(script: Self.announcingPID("sleep 30"))
+        defer { fake.remove() }
         let runner = fake.runner
         let task = Task { try await runner.run([], timeout: .seconds(60), onStderr: nil) }
         try await waitForFile(fake.file("pid"))
@@ -82,6 +89,7 @@ struct ProcessOsttRunnerTests {
 
     @Test func alreadyCancelledTaskDoesNotLaunch() async throws {
         let fake = try FakeOstt(script: Self.announcingPID("echo ran"))
+        defer { fake.remove() }
         let runner = fake.runner
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
@@ -99,12 +107,51 @@ struct ProcessOsttRunnerTests {
             sleep 0.3
             echo done
             """)
+        defer { fake.remove() }
         let chunks = Collector<String>()
         let result = try await fake.runner.run([], timeout: .seconds(10)) { chunks.append($0) }
         #expect(chunks.values.count >= 2)
         #expect(chunks.values.joined() == result.stderr)
         #expect(result.stderr.contains("100.0%"))
         #expect(result.stdout == "done\n")
+    }
+
+    @Test func multiByteCharacterSplitAcrossStderrReadsIsNotGarbled() async throws {
+        // "П" is D0 9F; the sleep makes the two bytes arrive in separate reads.
+        let fake = try FakeOstt(script: "printf '\\320' >&2; sleep 0.3; printf '\\237\\n' >&2")
+        defer { fake.remove() }
+        let chunks = Collector<String>()
+        let result = try await fake.runner.run([], timeout: .seconds(10)) { chunks.append($0) }
+        #expect(result.stderr == "П\n")
+        #expect(chunks.values.count == 1)
+        #expect(chunks.values.joined() == "П\n")
+    }
+
+    @Test(arguments: [
+        ([0x61], 1),
+        ([0x61, 0xD0], 1),
+        ([0x61, 0xD0, 0x9F], 3),
+        ([0xE2, 0x80], 0),
+        ([0xE2, 0x80, 0xA6], 3),
+        ([0x61, 0xF0, 0x9F, 0xA6], 1),
+        ([0xF0, 0x9F, 0xA6, 0x94], 4),
+    ] as [([UInt8], Int)])
+    func completeUTF8LengthHoldsBackOnlyAnUnfinishedSequence(bytes: [UInt8], expected: Int) {
+        #expect(ProcessOsttRunner.completeUTF8Length(Data(bytes)) == expected)
+    }
+
+    @Test func pipesAreClosedWhenTheCallReturnsNotWhenTheTimeoutFires() async throws {
+        func openDescriptors() throws -> Int {
+            try FileManager.default.contentsOfDirectory(atPath: "/dev/fd").count
+        }
+        let runner = ProcessOsttRunner(executableURL: URL(filePath: "/bin/echo"))
+        let before = try openDescriptors()
+        for _ in 0..<200 {
+            _ = try await runner.run([], timeout: .seconds(120), onStderr: nil)
+        }
+        // Holding the pipes until the timeout would add 400 descriptors; tests running in parallel
+        // account for up to about 60.
+        #expect(try openDescriptors() - before < 150)
     }
 
     @Test func missingExecutableIsHelperMissing() async throws {

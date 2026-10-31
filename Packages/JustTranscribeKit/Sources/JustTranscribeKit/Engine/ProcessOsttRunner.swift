@@ -38,6 +38,19 @@ public struct ProcessOsttRunner: OsttRunning {
     }
 }
 
+extension ProcessOsttRunner {
+    /// Length of `data` without a trailing UTF-8 sequence that the next read may complete.
+    static func completeUTF8Length(_ data: Data) -> Int {
+        let bytes = Array(data.suffix(3))
+        for (offset, byte) in bytes.enumerated().reversed() where byte & 0xC0 != 0x80 {
+            let needed = byte >= 0xF0 ? 4 : byte >= 0xE0 ? 3 : byte >= 0xC0 ? 2 : 1
+            let available = bytes.count - offset
+            return available < needed ? data.count - available : data.count
+        }
+        return data.count
+    }
+}
+
 /// One ostt invocation. All mutable state is guarded by `lock`; the continuation is resumed once.
 private final class Execution: @unchecked Sendable {
     enum Stop { case timedOut, cancelled }
@@ -50,6 +63,8 @@ private final class Execution: @unchecked Sendable {
     private var continuation: CheckedContinuation<OsttResult, any Error>?
     private var stdout = Data()
     private var stderr = Data()
+    /// Trailing bytes of an incomplete UTF-8 sequence, held back from `onStderr` until the next chunk.
+    private var stderrPending = Data()
     private var stdoutOpen = true
     private var stderrOpen = true
     private var launched = false
@@ -90,7 +105,10 @@ private final class Execution: @unchecked Sendable {
         }
         launched = true
         lock.unlock()
-        DispatchQueue.global().asyncAfter(deadline: .now() + Self.seconds(timeout)) { [self] in stop(.timedOut) }
+        // Timers hold `self` weakly so the pipes close when the call returns, not when the timer fires.
+        DispatchQueue.global().asyncAfter(deadline: .now() + Self.seconds(timeout)) { [weak self] in
+            self?.stop(.timedOut)
+        }
     }
 
     func stop(_ reason: Stop) {
@@ -103,31 +121,45 @@ private final class Execution: @unchecked Sendable {
         // Process makes the child a group leader; signalling the group also stops its children,
         // which would otherwise keep the pipes open.
         kill(-pid, SIGTERM)
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [self] in
-            if lock.withLock({ !finished }) { kill(-pid, SIGKILL) }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [weak self] in
+            if let self, lock.withLock({ !finished }) { kill(-pid, SIGKILL) }
         }
     }
 
     private func receive(_ data: Data, fromStdout: Bool) {
         if data.isEmpty {
+            if !fromStdout, let onStderr {
+                let rest = lock.withLock { stderrPending }
+                if !rest.isEmpty { onStderr(String(decoding: rest, as: UTF8.self)) }
+            }
             closeStream(stdout: fromStdout)
             return
         }
-        lock.withLock {
-            if fromStdout { stdout.append(data) } else { stderr.append(data) }
+        let chunk: Data? = lock.withLock {
+            if fromStdout {
+                stdout.append(data)
+                return nil
+            }
+            stderr.append(data)
+            stderrPending.append(data)
+            let complete = stderrPending.prefix(ProcessOsttRunner.completeUTF8Length(stderrPending))
+            stderrPending.removeFirst(complete.count)
+            return complete
         }
-        if !fromStdout, let onStderr {
-            onStderr(String(decoding: data, as: UTF8.self))
+        if let chunk, !chunk.isEmpty, let onStderr {
+            onStderr(String(decoding: chunk, as: UTF8.self))
         }
     }
 
     private func processExited() {
         lock.withLock { exited = true }
+        process.terminationHandler = nil
         finishIfDone()
         // A grandchild may still hold a pipe open; ostt's own output is complete once it exits.
-        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [self] in
-            closeStream(stdout: true)
-            closeStream(stdout: false)
+        // If `self` is gone, the call has already returned.
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [weak self] in
+            self?.closeStream(stdout: true)
+            self?.closeStream(stdout: false)
         }
     }
 

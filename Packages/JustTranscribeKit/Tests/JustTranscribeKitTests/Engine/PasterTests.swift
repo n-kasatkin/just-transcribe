@@ -10,10 +10,15 @@ private final class PasteRecorder {
     var trusted = true
     var secureInput = false
     var secureInputChecks = 0
+    var pasteboardWorks = true
 
     func paster() -> Paster {
         Paster(
-            writePasteboard: { [self] in pasteboard = $0 },
+            writePasteboard: { [self] in
+                guard pasteboardWorks else { return false }
+                pasteboard = $0
+                return true
+            },
             isAccessibilityTrusted: { [self] in trusted },
             isSecureInputEnabled: { [self] in secureInput },
             sendPasteKeystroke: { [self] in keystrokes += 1 },
@@ -44,6 +49,13 @@ struct PasterTests {
         recorder.trusted = false
         #expect(await recorder.paster().paste("text") == .copiedOnly)
         #expect(recorder.pasteboard == "text")
+        #expect(recorder.keystrokes == 0)
+    }
+
+    @Test func failedPasteboardWriteSendsNoKeystroke() async {
+        let recorder = PasteRecorder()
+        recorder.pasteboardWorks = false
+        #expect(await recorder.paster().paste("text") == .copiedOnly)
         #expect(recorder.keystrokes == 0)
     }
 

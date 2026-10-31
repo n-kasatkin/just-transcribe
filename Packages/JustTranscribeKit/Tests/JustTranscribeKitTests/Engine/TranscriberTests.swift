@@ -55,6 +55,7 @@ struct TranscriberTests {
 
     @Test func endToEndThroughFakeOstt() async throws {
         let fake = try FakeOstt(script: "[ \"$1\" = transcribe ] && [ -n \"$2\" ] && echo 'Съешь же ещё этих мягких французских булок 🥐'")
+        defer { fake.remove() }
         let text = try await Transcriber(runner: fake.runner)
             .transcribe(file: fake.file("take.m4a"), audioDuration: .seconds(1))
         #expect(text == "Съешь же ещё этих мягких французских булок 🥐")

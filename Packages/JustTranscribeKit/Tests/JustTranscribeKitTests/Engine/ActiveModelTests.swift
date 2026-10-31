@@ -29,6 +29,7 @@ struct ActiveModelTests {
 
     @Test func currentRunsModelCurrentThroughTheRunner() async throws {
         let fake = try FakeOstt(script: "[ \"$1 $2\" = 'model current' ] && echo 'whisper/base' || exit 2")
+        defer { fake.remove() }
         #expect(try await ActiveModel.current(using: fake.runner) == ActiveModel(providerID: "whisper", modelID: "base"))
     }
 }
