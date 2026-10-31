@@ -1,0 +1,94 @@
+# XcodeGen spec of just transcribe. scripts/bootstrap.sh fetches the ostt helper, runs
+# `xcodegen generate` (the .xcodeproj is git-ignored) and copies the root Package.resolved in.
+# After changing a package pin, run `xcodebuild -resolvePackageDependencies` and copy the
+# project's Package.resolved back to the repo root.
+name: JustTranscribe
+
+options:
+  bundleIdPrefix: dev.actionhook
+  deploymentTarget:
+    macOS: "14.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+
+settings:
+  base:
+    DEVELOPMENT_TEAM: 3V43DGM2S6
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ARCHS: arm64
+    SWIFT_VERSION: "6.0"
+    SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  JustTranscribeKit:
+    path: Packages/JustTranscribeKit
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    exactVersion: 1.10.0
+
+targets:
+  JustTranscribe:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes: ["*.entitlements"]
+    dependencies:
+      - package: JustTranscribeKit
+      - package: KeyboardShortcuts
+    postBuildScripts:
+      # Runs before Xcode signs the app, so the app's seal covers the signed helper.
+      - name: Embed ostt helper
+        script: '"${SRCROOT}/scripts/embed-ostt.sh"'
+        inputFiles:
+          - $(SRCROOT)/scripts/embed-ostt.sh
+          - $(SRCROOT)/vendor/ostt/ostt
+          - $(SRCROOT)/vendor/ostt/LICENSE
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/ostt
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/OSTT_LICENSE
+    settings:
+      base:
+        PRODUCT_NAME: just transcribe
+        PRODUCT_MODULE_NAME: JustTranscribe
+        EXECUTABLE_NAME: just-transcribe
+        PRODUCT_BUNDLE_IDENTIFIER: dev.actionhook.justtranscribe
+        CODE_SIGN_ENTITLEMENTS: App/JustTranscribe.entitlements
+        CODE_SIGN_STYLE: Manual
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: just transcribe
+        INFOPLIST_KEY_LSUIElement: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "just transcribe records your voice while you dictate and sends it to the transcription engine you chose."
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Copyright © 2026 actionhook. MIT License."
+      configs:
+        # Apple Development needs no provisioning profile here; the .dev id keeps Debug's
+        # privacy grants apart from Release's.
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: dev.actionhook.justtranscribe.dev
+          CODE_SIGN_IDENTITY: Apple Development
+        # Local measurement without the cert: CODE_SIGN_IDENTITY="Apple Development"
+        # DEVELOPMENT_TEAM=3V43DGM2S6 on the xcodebuild command line (the team signs package bundles).
+        Release:
+          CODE_SIGN_IDENTITY: Developer ID Application
+
+schemes:
+  JustTranscribe:
+    build:
+      targets:
+        JustTranscribe: all
+    test:
+      config: Debug
+      gatherCoverageData: false
+      targets:
+        - package: JustTranscribeKit/JustTranscribeKitTests
+    run:
+      config: Debug
+    archive:
+      config: Release
