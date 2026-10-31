@@ -40,5 +40,5 @@ struct AppMenu: View {
             .keyboardShortcut("q")
     }
 
-    private static let releasesURL = URL(string: "https://github.com/actionhook-dev/just-transcribe/releases/latest")!
+    private static let releasesURL = URL(string: "https://github.com/n-kasatkin/just-transcribe/releases/latest")!
 }

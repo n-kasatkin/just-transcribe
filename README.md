@@ -7,7 +7,7 @@
 <p align="center"><strong>Press a key. Talk. It's typed.</strong></p>
 
 <p align="center">
-  <a href="https://github.com/actionhook-dev/just-transcribe/releases/latest/download/just-transcribe.dmg"><strong>Download just-transcribe.dmg</strong></a><br>
+  <a href="https://github.com/n-kasatkin/just-transcribe/releases/latest/download/just-transcribe.dmg"><strong>Download just-transcribe.dmg</strong></a><br>
   macOS 14+, Apple Silicon · tested on macOS 26
 </p>
 
@@ -110,4 +110,4 @@ cd Packages/JustTranscribeKit && swift test
 
 ## License
 
-MIT. Copyright (c) 2026 actionhook. See [LICENSE](LICENSE).
+MIT. Copyright (c) 2026 Nikita Kasatkin. See [LICENSE](LICENSE).

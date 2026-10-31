@@ -350,7 +350,7 @@ Contents:
 2. [Rust crates](#rust-crates): $crate_count packages from ostt's \`Cargo.lock\` that its $TARGET build compiles.
 3. [Licence texts](#licence-texts): the $text_count distinct licence texts the crates reference.
 4. [Vendored C/C++ components](#vendored): transcribe.cpp and the components it vendors, built into ostt by transcribe-cpp-sys, and SQLite, built in by libsqlite3-sys.
-5. [Swift packages](#swift-packages): $swift_count packages built into the app.
+5. [Swift packages](#swift-packages): the packages built into the app ($swift_count).
 6. [Speech models](#speech-models): credits for the optional offline models.
 
 ## Summary

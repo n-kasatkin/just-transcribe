@@ -10,7 +10,7 @@ Contents:
 2. [Rust crates](#rust-crates): 257 packages from ostt's `Cargo.lock` that its aarch64-apple-darwin build compiles.
 3. [Licence texts](#licence-texts): the 40 distinct licence texts the crates reference.
 4. [Vendored C/C++ components](#vendored): transcribe.cpp and the components it vendors, built into ostt by transcribe-cpp-sys, and SQLite, built in by libsqlite3-sys.
-5. [Swift packages](#swift-packages): 1 packages built into the app.
+5. [Swift packages](#swift-packages): the packages built into the app (1).
 6. [Speech models](#speech-models): credits for the optional offline models.
 
 ## Summary

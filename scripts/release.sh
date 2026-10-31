@@ -4,7 +4,7 @@
 # Usage: scripts/release.sh [--publish] VERSION
 #   Without --publish it stops after printing the `gh release create` command; with it, it runs it.
 # Needs: a "Developer ID Application" identity of team 3V43DGM2S6 in the Keychain, the notarytool
-# keychain profile just-transcribe-notary, and gh logged in as actionhook-dev.
+# keychain profile just-transcribe-notary, and gh logged in as n-kasatkin.
 # Sourcing the script only defines its functions (scripts/measure.sh reuses make_dmg).
 set -euo pipefail
 
@@ -12,8 +12,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The project's team; set TEAM_ID in the environment to use your own.
 TEAM_ID="${TEAM_ID:-3V43DGM2S6}"
 NOTARY_PROFILE=just-transcribe-notary
-GH_OWNER=actionhook-dev
-GH_REPO=actionhook-dev/just-transcribe
+GH_OWNER=n-kasatkin
+GH_REPO=n-kasatkin/just-transcribe
 APP_NAME="just transcribe"
 DMG_NAME=just-transcribe.dmg
 DIST="$ROOT/dist"
@@ -56,7 +56,7 @@ developer_id() {
     | awk -v team="($TEAM_ID)\"" '/"Developer ID Application: / && index($0, team) {print $2; exit}'
 }
 
-# gh may hold several accounts; the release always uses actionhook-dev's token, whichever is active.
+# gh may hold several accounts; the release always uses n-kasatkin's token, whichever is active.
 gh_token() { gh auth token --hostname github.com --user "$GH_OWNER"; }
 
 # --- build -----------------------------------------------------------------------------------

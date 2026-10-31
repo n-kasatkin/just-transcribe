@@ -57,8 +57,8 @@ private struct AboutView: View {
                     .textSelection(.enabled)
             }
             VStack(spacing: 4) {
-                Text("Copyright © 2026 actionhook · MIT License")
-                Link("github.com/actionhook-dev/just-transcribe", destination: Self.repoURL)
+                Text("Copyright © 2026 Nikita Kasatkin · MIT License")
+                Link("github.com/n-kasatkin/just-transcribe", destination: Self.repoURL)
             }
             .font(.callout)
             Button("Acknowledgements", action: showAcknowledgements)
@@ -81,7 +81,7 @@ private struct AboutView: View {
         }
     }
 
-    private static let repoURL = URL(string: "https://github.com/actionhook-dev/just-transcribe")!
+    private static let repoURL = URL(string: "https://github.com/n-kasatkin/just-transcribe")!
 
     private static var appVersion: String {
         let info = Bundle.main.infoDictionary ?? [:]

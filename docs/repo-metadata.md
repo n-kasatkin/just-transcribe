@@ -1,6 +1,6 @@
 # Repository metadata
 
-The GitHub settings of `actionhook-dev/just-transcribe` that live outside the files.
+The GitHub settings of `n-kasatkin/just-transcribe` that live outside the files.
 
 ## Description
 
@@ -17,7 +17,7 @@ macos, menu-bar-app, dictation, speech-to-text, swift, ostt, whisper, elevenlabs
 Description and topics in one command, run as the account that owns the repo:
 
 ```sh
-gh repo edit actionhook-dev/just-transcribe \
+gh repo edit n-kasatkin/just-transcribe \
   --description "Super-lightweight dictation for macOS. Press a hotkey, talk, and the text is pasted where your cursor is. A native menu-bar app built on ostt: your own API key or an offline model." \
   --add-topic macos --add-topic menu-bar-app --add-topic dictation --add-topic speech-to-text \
   --add-topic swift --add-topic ostt --add-topic whisper --add-topic elevenlabs
