@@ -178,6 +178,8 @@ check_gatekeeper() { # stapled dmg
   mnt="$(mktemp -d)"
   hdiutil attach -quiet -readonly -nobrowse -mountpoint "$mnt" "$1"
   out="$(spctl -a -vvv "$mnt/$APP_NAME.app" 2>&1)" || { hdiutil detach -quiet "$mnt"; die "spctl rejects the app in the DMG: $out"; }
+  xcrun stapler validate -q "$mnt/$APP_NAME.app" \
+    || { hdiutil detach -quiet "$mnt"; die "the app in the DMG has no stapled ticket"; }
   hdiutil detach -quiet "$mnt"
   rmdir "$mnt"
   grep -q 'source=Notarized Developer ID' <<<"$out" || die "app is not 'Notarized Developer ID': $out"
@@ -241,13 +243,20 @@ main() {
     syspolicy_check notary-submission "$app" || echo "  warning: syspolicy_check failed; notarization decides"
   fi
 
+  # The app gets its own ticket: once dragged out of the DMG it no longer carries the DMG's,
+  # and Gatekeeper would need a network check on first launch.
+  stage "Notarize and staple the app"
+  ditto -c -k --keepParent "$app" "$work/app.zip"
+  notarize "$work/app.zip"
+  xcrun stapler staple "$app"
+
   stage "DMG"
   rm -rf "$DIST"
   dmg="$DIST/$DMG_NAME"
   make_dmg "$app" "$dmg" "$(developer_id)"
   check_signature "$dmg" "Developer ID Application"
 
-  stage "Notarize and staple"
+  stage "Notarize and staple the DMG"
   notarize "$dmg"
   xcrun stapler staple "$dmg"
   xcrun stapler validate "$dmg"
