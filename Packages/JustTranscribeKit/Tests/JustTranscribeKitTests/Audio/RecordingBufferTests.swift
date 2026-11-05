@@ -4,24 +4,38 @@ import Testing
 @testable import JustTranscribeKit
 
 struct RecordingBufferTests {
-    /// Stereo 48 kHz buffers like a typical input device delivers, both channels carrying `samples`.
-    private func chunks(_ samples: [Float], frames: Int = 4_800, rate: Double = 48_000) throws -> [AVAudioPCMBuffer] {
-        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: rate, channels: 2))
+    /// Device-like buffers, stereo 48 kHz by default; mono and stereo carry `samples` on every channel,
+    /// wider interfaces on the first channel only.
+    private func chunks(
+        _ samples: [Float], frames: Int = 4_800, rate: Double = 48_000, channels: AVAudioChannelCount = 2
+    ) throws -> [AVAudioPCMBuffer] {
+        // Over two channels a format needs a layout; audio interfaces report discrete channels.
+        let layout = try #require(AVAudioChannelLayout(layoutTag: kAudioChannelLayoutTag_DiscreteInOrder | channels))
+        let format = channels > 2
+            ? AVAudioFormat(standardFormatWithSampleRate: rate, channelLayout: layout)
+            : try #require(AVAudioFormat(standardFormatWithSampleRate: rate, channels: channels))
         return try stride(from: 0, to: samples.count, by: frames).map { start in
             let count = min(frames, samples.count - start)
             let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(count)))
-            for channel in 0..<2 {
-                samples.withUnsafeBufferPointer { buffer.floatChannelData![channel].update(from: $0.baseAddress! + start, count: count) }
+            for channel in 0..<Int(channels) {
+                // An interface carries the mic on its first input; the rest stay silent.
+                if channels > 2 && channel > 0 {
+                    buffer.floatChannelData![channel].update(repeating: 0, count: count)
+                } else {
+                    samples.withUnsafeBufferPointer { buffer.floatChannelData![channel].update(from: $0.baseAddress! + start, count: count) }
+                }
             }
             buffer.frameLength = AVAudioFrameCount(count)
             return buffer
         }
     }
 
-    @Test func convertsAndAccumulatesTo16kMono() throws {
-        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
-        let buffer = try #require(RecordingBuffer(inputFormat: format))
-        for chunk in try chunks(Signals.tone(seconds: 1, rate: 48_000)) {
+    /// Built-in mics, USB mics and audio interfaces, headsets in call mode, studio rates.
+    @Test(arguments: [(48_000, 2), (44_100, 1), (44_100, 2), (24_000, 1), (16_000, 1), (8_000, 1), (96_000, 4)]
+        as [(Double, AVAudioChannelCount)])
+    func convertsAnyDeviceFormatTo16kMono(rate: Double, channels: AVAudioChannelCount) throws {
+        let buffer = RecordingBuffer()
+        for chunk in try chunks(Signals.tone(seconds: 1, rate: Int(rate)), frames: Int(rate / 10), rate: rate, channels: channels) {
             buffer.append(chunk)
         }
         #expect(buffer.level == 1)
@@ -33,14 +47,11 @@ struct RecordingBufferTests {
     }
 
     @Test func switchingInputFormatKeepsTheTake() throws {
-        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
-        let buffer = try #require(RecordingBuffer(inputFormat: format))
+        let buffer = RecordingBuffer()
         for chunk in try chunks(Signals.tone(seconds: 1, rate: 48_000)) {
             buffer.append(chunk)
         }
         // A Bluetooth headset switching to its call profile drops the input to 24 kHz.
-        let headset = try #require(AVAudioFormat(standardFormatWithSampleRate: 24_000, channels: 2))
-        #expect(buffer.switchInput(to: headset))
         for chunk in try chunks(Signals.tone(seconds: 0.5, rate: 24_000), frames: 2_400, rate: 24_000) {
             buffer.append(chunk)
         }
@@ -48,8 +59,7 @@ struct RecordingBufferTests {
     }
 
     @Test func quietInputHasZeroLevel() throws {
-        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48_000, channels: 2))
-        let buffer = try #require(RecordingBuffer(inputFormat: format))
+        let buffer = RecordingBuffer()
         for chunk in try chunks(Signals.tone(seconds: 0.2, dbfs: -70, rate: 48_000)) {
             buffer.append(chunk)
         }

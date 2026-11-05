@@ -5,7 +5,7 @@ import os
 public enum RecorderError: Error, Sendable, Equatable {
     /// Microphone access is not granted; the app asks for it in onboarding, never here.
     case microphoneNotAuthorized
-    /// No input device, or its format cannot be converted.
+    /// No input device, or it reports no channels or no sample rate.
     case noInputDevice
     /// `AVAudioEngine` failed to start; carries its description.
     case engineFailed(String)
@@ -50,11 +50,9 @@ public final class Recorder {
         let engine = AVAudioEngine()
         let input = engine.inputNode
         selectInputDevice(on: input)
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0, let buffer = RecordingBuffer(inputFormat: format) else {
-            throw RecorderError.noInputDevice
-        }
-        Self.installTap(on: input, format: format, into: buffer)
+        guard Self.hasInput(input) else { throw RecorderError.noInputDevice }
+        let buffer = RecordingBuffer()
+        Self.installTap(on: input, into: buffer)
         engine.prepare()
         do {
             try engine.start()
@@ -79,18 +77,17 @@ public final class Recorder {
     }
 
     /// The engine stopped because the input or output hardware changed, as when a Bluetooth headset
-    /// switches profile right after capture starts. Carries on with the new format in the same take.
+    /// switches profile right after capture starts. Carries on in the same take; the buffer adapts to the new format.
     private func resume() {
         guard let engine, let buffer else { return }
         let input = engine.inputNode
         input.removeTap(onBus: 0)
         selectInputDevice(on: input)
-        let format = input.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0, buffer.switchInput(to: format) else {
+        guard Self.hasInput(input) else {
             onInterrupted?()
             return
         }
-        Self.installTap(on: input, format: format, into: buffer)
+        Self.installTap(on: input, into: buffer)
         engine.prepare()
         do {
             try engine.start()
@@ -143,57 +140,59 @@ public final class Recorder {
         onLevel?(0)
     }
 
+    /// False when the hardware side or the tapped side reports no channels or no sample rate; tapping
+    /// an empty format raises an exception Swift cannot catch.
+    private static func hasInput(_ input: AVAudioInputNode) -> Bool {
+        [input.inputFormat(forBus: 0), input.outputFormat(forBus: 0)].allSatisfy { $0.sampleRate > 0 && $0.channelCount > 0 }
+    }
+
     // Nonisolated so the tap block is not main-actor isolated: it runs on the audio thread.
-    private nonisolated static func installTap(on input: AVAudioInputNode, format: AVAudioFormat, into buffer: RecordingBuffer) {
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { pcm, _ in
+    // A nil format taps the node's own format, so a device switch can never raise a format-mismatch
+    // exception; the buffer converts whatever rate and channel count arrives.
+    private nonisolated static func installTap(on input: AVAudioInputNode, into buffer: RecordingBuffer) {
+        input.installTap(onBus: 0, bufferSize: 1024, format: nil) { pcm, _ in
             buffer.append(pcm)
         }
     }
 }
 
-/// Accumulates converted samples from the audio thread and keeps the latest level.
+/// Accumulates converted samples from the audio thread and keeps the latest level. Buffers of any
+/// sample rate and channel count are accepted; a format change mid-take starts a new converter.
 final class RecordingBuffer: @unchecked Sendable {
     private struct State {
-        var converter: SampleConverter
+        var converter: SampleConverter?
         var samples: [Float] = []
         var level: Double = 0
+
+        /// Moves the samples the resampler still holds into `samples`.
+        mutating func flush() {
+            samples.append(contentsOf: (try? converter?.finish()) ?? [])
+        }
     }
 
     // Guards the non-Sendable converter and the samples; @unchecked rests on this lock.
-    private let state: OSAllocatedUnfairLock<State>
-
-    init?(inputFormat: AVAudioFormat) {
-        guard let converter = SampleConverter(from: inputFormat) else { return nil }
-        state = OSAllocatedUnfairLock(uncheckedState: State(converter: converter))
-    }
+    private let state = OSAllocatedUnfairLock(uncheckedState: State())
 
     var level: Double { state.withLockUnchecked { $0.level } }
 
-    /// Converts and keeps `buffer`; a buffer the converter rejects is dropped, as the audio
+    /// Converts and keeps `buffer`; a buffer that cannot be converted is dropped, as the audio
     /// thread has nobody to report to.
     func append(_ buffer: AVAudioPCMBuffer) {
         state.withLockUnchecked { state in
-            guard let converted = try? state.converter.convert(buffer), !converted.isEmpty else { return }
+            if state.converter?.inputFormat != buffer.format {
+                state.flush()
+                state.converter = SampleConverter(from: buffer.format)
+            }
+            guard let converted = try? state.converter?.convert(buffer), !converted.isEmpty else { return }
             state.level = LevelMeter.level(rms: converted.withUnsafeBufferPointer { vDSP.rootMeanSquare($0) })
             state.samples.append(contentsOf: converted)
         }
     }
 
-    /// Keeps the samples converted so far and converts later buffers from `format`; false when
-    /// `format` cannot be converted.
-    func switchInput(to format: AVAudioFormat) -> Bool {
-        guard let converter = SampleConverter(from: format) else { return false }
-        state.withLockUnchecked { state in
-            state.samples.append(contentsOf: (try? state.converter.finish()) ?? [])
-            state.converter = converter
-        }
-        return true
-    }
-
     /// All samples so far, including those the resampler still held.
     func finish() -> [Float] {
         state.withLockUnchecked { state in
-            state.samples.append(contentsOf: (try? state.converter.finish()) ?? [])
+            state.flush()
             return state.samples
         }
     }
