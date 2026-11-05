@@ -5,7 +5,7 @@ import os
 public enum RecorderError: Error, Sendable, Equatable {
     /// Microphone access is not granted; the app asks for it in onboarding, never here.
     case microphoneNotAuthorized
-    /// No default input device, or its format cannot be converted.
+    /// No input device, or its format cannot be converted.
     case noInputDevice
     /// `AVAudioEngine` failed to start; carries its description.
     case engineFailed(String)
@@ -19,14 +19,18 @@ public enum LevelMeter {
     }
 }
 
-/// Captures the default input device as 16 kHz mono Float samples and reports its level.
+/// Captures the chosen input device, or the macOS default input while none is chosen or the chosen one
+/// is not connected, as 16 kHz mono Float samples and reports its level.
 @MainActor
 public final class Recorder {
     /// Called on the main actor about 30 times a second while recording, with a level in 0...1.
     public var onLevel: ((Double) -> Void)?
     /// Called on the main actor when the audio hardware changed mid-recording and capture could not
-    /// resume on the new default input. Capture has ended: call `stop()` to keep the take so far, or `cancel()`.
+    /// resume on the new input. Capture has ended: call `stop()` to keep the take so far, or `cancel()`.
     public var onInterrupted: (() -> Void)?
+
+    /// The chosen input device's UID, read at each start and hardware change; nil means the macOS default.
+    public var inputDeviceUID: () -> String? = { nil }
 
     private var engine: AVAudioEngine?
     private var buffer: RecordingBuffer?
@@ -43,9 +47,9 @@ public final class Recorder {
         guard AVCaptureDevice.authorizationStatus(for: .audio) == .authorized else {
             throw RecorderError.microphoneNotAuthorized
         }
-        // A fresh engine picks up the current default input device.
         let engine = AVAudioEngine()
         let input = engine.inputNode
+        selectInputDevice(on: input)
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0, let buffer = RecordingBuffer(inputFormat: format) else {
             throw RecorderError.noInputDevice
@@ -80,6 +84,7 @@ public final class Recorder {
         guard let engine, let buffer else { return }
         let input = engine.inputNode
         input.removeTap(onBus: 0)
+        selectInputDevice(on: input)
         let format = input.outputFormat(forBus: 0)
         guard format.sampleRate > 0, format.channelCount > 0, buffer.switchInput(to: format) else {
             onInterrupted?()
@@ -92,6 +97,21 @@ public final class Recorder {
         } catch {
             onInterrupted?()
         }
+    }
+
+    /// Points `input` at the chosen device when it is connected, otherwise at the macOS default, so an
+    /// unplugged device falls back mid-take too. The choice stays stored and is used again once it returns.
+    private func selectInputDevice(on input: AVAudioInputNode) {
+        guard let unit = input.audioUnit,
+              var device = inputDeviceUID().flatMap(InputDevices.deviceID(uid:)) ?? InputDevices.defaultDeviceID()
+        else { return }
+        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var current = AudioDeviceID(0)
+        var currentSize = size
+        // Setting the device it already uses would raise another configuration change.
+        if AudioUnitGetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &current, &currentSize) == noErr,
+           current == device { return }
+        AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &device, size)
     }
 
     /// Stops capturing and returns everything recorded since `start()`.

@@ -4,7 +4,7 @@ import JustTranscribeKit
 import KeyboardShortcuts
 import SwiftUI
 
-/// Shortcut, start at login, the menu-bar icon and permission status. Checks never prompt; they refresh whenever the
+/// Shortcut, microphone, start at login, the menu-bar icon and permission status. Checks never prompt; they refresh whenever the
 /// window becomes key or the app becomes active, so a change made in System Settings shows on return.
 struct GeneralSettingsView: View {
     let loginItem: LoginItem
@@ -13,6 +13,10 @@ struct GeneralSettingsView: View {
     @AppStorage(AppPreferences.showMenuBarIconKey) private var showMenuBarIcon = true
     @AppStorage(AppPreferences.hideMenuBarIconConfirmedKey) private var hideConfirmed = false
     @State private var confirmingHide = false
+    @AppStorage(AppPreferences.inputDeviceKey) private var inputDeviceUID = ""
+    @AppStorage(AppPreferences.inputDeviceNameKey) private var inputDeviceName = ""
+    @State private var inputDevices: [InputDevice] = []
+    @State private var defaultInputName: String?
 
     var body: some View {
         Form {
@@ -20,6 +24,18 @@ struct GeneralSettingsView: View {
                 KeyboardShortcuts.Recorder("Dictation shortcut", name: .toggleDictation)
             } footer: {
                 Text("Press it to start, press it again to paste the text. Escape cancels.")
+            }
+
+            Section {
+                Picker("Microphone", selection: Binding(get: { inputDeviceUID }, set: selectInputDevice)) {
+                    Text(defaultInputName.map { "System default (\($0))" } ?? "System default").tag("")
+                    ForEach(inputDevices) { Text($0.name).tag($0.uid) }
+                    if !inputDeviceUID.isEmpty, !inputDevices.contains(where: { $0.uid == inputDeviceUID }) {
+                        Text("\(inputDeviceName.isEmpty ? inputDeviceUID : inputDeviceName) (not connected)").tag(inputDeviceUID)
+                    }
+                }
+            } footer: {
+                Text("A microphone that is not connected is used again once it returns; until then the system default records.")
             }
 
             Section {
@@ -87,6 +103,23 @@ struct GeneralSettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
             refresh()
         }
+        .task {
+            for await _ in InputDevices.changes() { refreshInputDevices() }
+        }
+    }
+
+    private func selectInputDevice(_ uid: String) {
+        inputDeviceUID = uid
+        if let device = inputDevices.first(where: { $0.uid == uid }) {
+            inputDeviceName = device.name
+        } else if uid.isEmpty {
+            inputDeviceName = ""
+        }
+    }
+
+    private func refreshInputDevices() {
+        inputDevices = InputDevices.all()
+        defaultInputName = InputDevices.defaultName()
     }
 
     /// Hiding asks once, so the user learns the way back before the icon is gone.
@@ -102,6 +135,7 @@ struct GeneralSettingsView: View {
         microphone = MicrophoneAccess(AVCaptureDevice.authorizationStatus(for: .audio))
         accessibility = AXIsProcessTrusted()
         loginItem.refresh()
+        refreshInputDevices()
     }
 }
 

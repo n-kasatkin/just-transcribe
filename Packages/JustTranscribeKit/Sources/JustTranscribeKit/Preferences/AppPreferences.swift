@@ -38,6 +38,10 @@ public struct AppPreferences: @unchecked Sendable {
     public static let hideMenuBarIconConfirmedKey = "hideMenuBarIconConfirmed"
     /// JSON of provider id → param name → `ParamValue`; a provider missing here uses `ProviderParams.defaults`.
     public static let providerParamsKey = "providerParams"
+    /// The chosen microphone's Core Audio UID; missing or empty means the macOS default input.
+    public static let inputDeviceKey = "inputDeviceUID"
+    /// The chosen microphone's name, so Settings can show it while it is not connected.
+    public static let inputDeviceNameKey = "inputDeviceName"
 
     public static let defaultRecordingRetention = RetentionPeriod.threeDays
     public static let defaultHistoryRetention = RetentionPeriod.thirtyDays
@@ -60,6 +64,11 @@ public struct AppPreferences: @unchecked Sendable {
 
     public var showMenuBarIcon: Bool {
         defaults.object(forKey: Self.showMenuBarIconKey) as? Bool ?? true
+    }
+
+    /// The chosen microphone's UID, or nil for the macOS default input.
+    public var inputDeviceUID: String? {
+        defaults.string(forKey: Self.inputDeviceKey).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// The params sent with every transcription by this provider's models.

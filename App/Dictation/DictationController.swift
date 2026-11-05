@@ -22,6 +22,7 @@ final class DictationController {
         runner: any OsttRunning, preferences: AppPreferences, history: HistoryStore, openSettings: @escaping () -> Void
     ) {
         let recorder = Recorder()
+        recorder.inputDeviceUID = { preferences.inputDeviceUID }
         let models = ActiveModelCache(runner: runner, configFile: preferences.paths.configFile)
         self.models = models
         session = DictationSession(.live(

@@ -49,6 +49,15 @@ final class AppPreferencesTests {
         #expect(!preferences.showMenuBarIcon)
     }
 
+    @Test func inputDeviceFollowsTheSystemDefaultUntilChosen() {
+        let preferences = AppPreferences(defaults: defaults, paths: paths)
+        #expect(preferences.inputDeviceUID == nil)
+        defaults.set("", forKey: AppPreferences.inputDeviceKey)
+        #expect(preferences.inputDeviceUID == nil)
+        defaults.set("BuiltInMicrophoneDevice", forKey: AppPreferences.inputDeviceKey)
+        #expect(preferences.inputDeviceUID == "BuiltInMicrophoneDevice")
+    }
+
     @Test func recordingsFolderDefaultsToOstts() {
         let preferences = AppPreferences(defaults: defaults, paths: paths)
         #expect(preferences.recordingsDirectory == paths.recordingsDirectory)
