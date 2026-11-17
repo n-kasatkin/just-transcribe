@@ -43,6 +43,8 @@ struct TranscriptionSettingsView: View {
             } footer: {
                 if model.maskedKey == nil {
                     Text("Save a key to choose a model.")
+                } else {
+                    catalogFooter
                 }
             }
 
@@ -74,15 +76,47 @@ struct TranscriptionSettingsView: View {
             Picker("Model", selection: Binding(
                 get: { models.first(where: \.active)?.id },
                 set: { id in
-                    if let id { Task { await model.useCloudModel(id) } }
+                    // ostt refuses a model it doesn't list.
+                    if let id, models.contains(where: { $0.id == id }) { Task { await model.useCloudModel(id) } }
                 }
             )) {
                 Text("None").tag(OsttModelID?.none)
-                ForEach(models) { item in
-                    Text(item.name).tag(Optional(item.id))
+                if let catalog = model.providerCatalog {
+                    ForEach(ElevenLabsCatalog.merge(ostt: models, remote: catalog.value ?? [])) { item in
+                        Text(Self.label(item))
+                            .tag(Optional(OsttModelID(provider: model.providerID, model: item.id)))
+                            .selectionDisabled(!item.selectable)
+                    }
+                } else {
+                    ForEach(models) { item in
+                        Text(item.name).tag(Optional(item.id))
+                    }
                 }
             }
             .disabled(model.maskedKey == nil)
         }
+    }
+
+    @ViewBuilder private var catalogFooter: some View {
+        switch model.providerCatalog {
+        case .loaded:
+            Text("Models ostt can't transcribe with are listed but greyed out. Prices are ElevenLabs credits per character; Scribe bills per audio minute, which the API doesn't report.")
+        case .failed(let message):
+            Text("Couldn't load ElevenLabs' model list: \(message)")
+        case .idle, .loading, nil:
+            EmptyView()
+        }
+    }
+
+    /// "Eleven v3 · text → audio · 1 credit/char"
+    private static func label(_ item: CatalogModel) -> String {
+        let side = { (modalities: Set<Modality>) in
+            modalities.isEmpty ? "?" : modalities.sorted().map(\.rawValue).joined(separator: "/")
+        }
+        var parts = [item.name, "\(side(item.inputs)) → \(side(item.outputs))"]
+        if let credits = item.creditsPerCharacter {
+            parts.append("\(credits.formatted()) credit/char")
+        }
+        return parts.joined(separator: " · ")
     }
 }

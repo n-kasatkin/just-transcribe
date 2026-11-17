@@ -19,6 +19,9 @@ final class SettingsModel {
     private(set) var maskedKey: String?
     private(set) var providersWithKeys: Set<String> = []
     private(set) var cloudModels: Loadable<[OsttModel]> = .idle
+    /// ElevenLabs' own model list, for the picker's capabilities and prices; nil for other providers.
+    private(set) var providerCatalog: Loadable<[CatalogModel]>?
+    @ObservationIgnored private var catalogGeneration = 0
     private(set) var currentModel: OsttModelID?
     private(set) var transcriptionError: String?
 
@@ -75,7 +78,9 @@ final class SettingsModel {
             providerID = provider
         }
         refreshKey()
+        async let catalog: Void = loadCatalog()
         await loadCloudModels()
+        await catalog
     }
 
     func selectProvider(_ id: String) {
@@ -85,6 +90,7 @@ final class SettingsModel {
         transcriptionError = nil
         refreshKey()
         Task { await loadCloudModels() }
+        Task { await loadCatalog() }
     }
 
     /// - Returns: whether a key was saved.
@@ -96,6 +102,7 @@ final class SettingsModel {
             try credentials.setKey(provider: providerID, key: key)
             keyDraft = ""
             transcriptionError = nil
+            Task { await loadCatalog() }
             return true
         } catch {
             transcriptionError = SettingsState.message(for: error)
@@ -127,6 +134,7 @@ final class SettingsModel {
         do {
             try credentials.removeKey(provider: providerID)
             transcriptionError = nil
+            Task { await loadCatalog() }
         } catch {
             transcriptionError = SettingsState.message(for: error)
         }
@@ -157,6 +165,27 @@ final class SettingsModel {
         }
         // A newer provider choice owns the list now.
         if provider == providerID { cloudModels = result }
+    }
+
+    /// Fetches ElevenLabs' list when the provider or its key changes; only the latest call's result is kept.
+    private func loadCatalog() async {
+        catalogGeneration += 1
+        let generation = catalogGeneration
+        let result: Loadable<[CatalogModel]>?
+        do {
+            if providerID == ElevenLabsCatalog.providerID, let key = try credentials.apiKey(provider: providerID) {
+                result = .loaded(try await ElevenLabsCatalog.fetch(apiKey: key))
+            } else {
+                result = nil
+            }
+        } catch ElevenLabsCatalogError.rejected(let message) {
+            result = .failed(message)
+        } catch ElevenLabsCatalogError.unreadable {
+            result = .failed("its answer has an unexpected format.")
+        } catch {
+            result = .failed(SettingsState.message(for: error))
+        }
+        if generation == catalogGeneration { providerCatalog = result }
     }
 
     private func refreshKey() {

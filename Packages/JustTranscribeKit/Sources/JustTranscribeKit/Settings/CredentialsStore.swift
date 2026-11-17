@@ -2,7 +2,8 @@ import Foundation
 
 /// ostt's API key file (`src/config/secrets.rs`): flat TOML, one `provider_id = "key"` line per
 /// provider. Edits touch only the given provider's line and keep every other byte as it was.
-/// Key material leaves this type only as `maskedKey(provider:)`.
+/// Key material leaves this type only as `maskedKey(provider:)`, and as `apiKey(provider:)` for the
+/// app's own calls to a provider API.
 public struct CredentialsStore: Sendable {
     public enum Failure: Error, Equatable, Sendable {
         /// Not a TOML bare key, the only form ostt itself writes.
@@ -29,12 +30,12 @@ public struct CredentialsStore: Sendable {
     }
 
     public func hasKey(provider: String) throws -> Bool {
-        try key(provider: provider) != nil
+        try apiKey(provider: provider) != nil
     }
 
     /// The saved key as `••••` plus its last four characters (only `••••` for keys under 8).
     public func maskedKey(provider: String) throws -> String? {
-        guard let key = try key(provider: provider) else { return nil }
+        guard let key = try apiKey(provider: provider) else { return nil }
         return key.count >= 8 ? "••••" + key.suffix(4) : "••••"
     }
 
@@ -72,7 +73,8 @@ public struct CredentialsStore: Sendable {
         }
     }
 
-    private func key(provider: String) throws -> String? {
+    /// The saved key itself, for a request the app sends to the provider directly.
+    public func apiKey(provider: String) throws -> String? {
         try lines().lazy.compactMap(Self.entry).first { $0.provider == provider }?.key
     }
 
